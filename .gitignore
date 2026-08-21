@@ -37,6 +37,9 @@ yarn-error.log*
 # Toggl exports: real client names and work descriptions, not for the repo
 Toggl_time_entries_*.csv
 
+# Database dumps at the repo root (drizzle/*.sql migrations stay tracked)
+/*.sql
+
 # vercel
 .vercel
 

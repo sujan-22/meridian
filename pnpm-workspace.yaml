@@ -1,5 +1,14 @@
+# Which dependencies may run install scripts. pnpm refuses to guess in CI, so
+# every entry has to be an explicit boolean - an unanswered one fails the
+# install with ERR_PNPM_IGNORED_BUILDS.
 allowBuilds:
-  '@parcel/watcher': true
-  esbuild: set this to true or false
-  sharp: false
-  unrs-resolver: false
+    # Fetches its platform binary. drizzle-kit, tsx and graphql-codegen all
+    # run through esbuild, and `vercel-build` runs drizzle-kit.
+    esbuild: true
+
+    # Native file watcher used by `pnpm codegen:watch`.
+    "@parcel/watcher": true
+
+    # Not used by this app.
+    sharp: false
+    unrs-resolver: false
