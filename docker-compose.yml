@@ -1,0 +1,22 @@
+# Local Postgres for development. Production runs on Neon.
+services:
+    postgres:
+        image: postgres:18
+        container_name: quanta-postgres
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: quanta
+            POSTGRES_PASSWORD: quanta
+            POSTGRES_DB: quanta
+        ports:
+            - "5432:5432"
+        volumes:
+            - quanta-postgres:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U quanta"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+volumes:
+    quanta-postgres:

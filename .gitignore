@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# Toggl exports: real client names and work descriptions, not for the repo
+Toggl_time_entries_*.csv
 
 # vercel
 .vercel

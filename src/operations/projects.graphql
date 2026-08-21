@@ -1,0 +1,69 @@
+fragment ProjectFields on Project {
+    id
+    name
+    color
+    defaultBillingType
+    polarisTask
+    archived
+    createdAt
+
+    client {
+        id
+        name
+        shortName
+    }
+}
+
+query Projects {
+    projects {
+        ...ProjectFields
+    }
+}
+
+query ProjectSummaries($includeArchived: Boolean) {
+    projectSummaries(includeArchived: $includeArchived) {
+        totalMinutes
+        entryCount
+        lastTrackedAt
+
+        project {
+            ...ProjectFields
+        }
+    }
+}
+
+query Clients {
+    clients {
+        id
+        name
+        shortName
+        color
+        archived
+    }
+}
+
+mutation CreateProject($input: CreateProjectInput!) {
+    createProject(input: $input) {
+        ...ProjectFields
+    }
+}
+
+mutation UpdateProject($id: ID!, $input: UpdateProjectInput!) {
+    updateProject(id: $id, input: $input) {
+        ...ProjectFields
+    }
+}
+
+mutation DeleteProject($id: ID!) {
+    deleteProject(id: $id)
+}
+
+mutation CreateClient($input: CreateClientInput!) {
+    createClient(input: $input) {
+        id
+        name
+        shortName
+        color
+        archived
+    }
+}

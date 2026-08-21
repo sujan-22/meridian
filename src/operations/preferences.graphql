@@ -1,0 +1,21 @@
+fragment PreferencesFields on Preferences {
+    weekStartsOn
+    showWeekend
+    dayStartHour
+    dayEndHour
+    calendarZoom
+    dailyTargetMinutes
+    weeklyTargetMinutes
+}
+
+query Preferences {
+    preferences {
+        ...PreferencesFields
+    }
+}
+
+mutation UpdatePreferences($input: UpdatePreferencesInput!) {
+    updatePreferences(input: $input) {
+        ...PreferencesFields
+    }
+}

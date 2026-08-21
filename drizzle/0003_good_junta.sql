@@ -1,0 +1,1 @@
+ALTER TABLE "preferences" ADD COLUMN "calendar_zoom" integer DEFAULT 1 NOT NULL;

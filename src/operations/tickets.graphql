@@ -1,0 +1,50 @@
+fragment TicketSummaryFields on TicketSummary {
+    ticketNumber
+    trackedMinutes
+    entryCount
+    firstTrackedAt
+    lastTrackedAt
+    estimateMinMinutes
+    estimateMaxMinutes
+    estimateNotes
+    remainingMinutes
+    status
+
+    project {
+        ...ProjectFields
+    }
+}
+
+query TicketSummaries {
+    ticketSummaries {
+        ...TicketSummaryFields
+    }
+}
+
+mutation SetTicketEstimate($input: SetTicketEstimateInput!) {
+    setTicketEstimate(input: $input) {
+        ...TicketSummaryFields
+    }
+}
+
+mutation ClearTicketEstimate($projectId: ID!, $ticketNumber: String!) {
+    clearTicketEstimate(projectId: $projectId, ticketNumber: $ticketNumber) {
+        ...TicketSummaryFields
+    }
+}
+
+mutation ImportTimeEntries(
+    $rows: [ImportTimeEntryInput!]!
+    $createMissingProjects: Boolean
+) {
+    importTimeEntries(
+        rows: $rows
+        createMissingProjects: $createMissingProjects
+    ) {
+        imported
+        duplicatesSkipped
+        unmatchedRows
+        projectsCreated
+        clientsCreated
+    }
+}

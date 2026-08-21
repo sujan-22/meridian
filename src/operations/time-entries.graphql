@@ -1,0 +1,81 @@
+fragment TimeEntryFields on TimeEntry {
+    id
+    description
+    ticketNumber
+    billingType
+    kind
+    startedAt
+    endedAt
+    durationSeconds
+    elapsedSeconds
+    isRunning
+    timesheetDurationMinutes
+    billedMinutes
+    timesheetEnteredAt
+
+    project {
+        id
+        name
+        color
+        defaultBillingType
+        polarisTask
+
+        client {
+            id
+            name
+            shortName
+        }
+    }
+}
+
+query ActiveTimer {
+    activeTimer {
+        ...TimeEntryFields
+    }
+}
+
+query Entries($from: DateTime!, $to: DateTime!) {
+    entries(from: $from, to: $to) {
+        ...TimeEntryFields
+    }
+}
+
+query RecentEntries($limit: Int) {
+    recentEntries(limit: $limit) {
+        ...TimeEntryFields
+    }
+}
+
+query DescriptionSuggestions($query: String!, $limit: Int) {
+    descriptionSuggestions(query: $query, limit: $limit) {
+        ...TimeEntryFields
+    }
+}
+
+mutation StartTimer($input: StartTimerInput!) {
+    startTimer(input: $input) {
+        ...TimeEntryFields
+    }
+}
+
+mutation StopTimer($id: ID!) {
+    stopTimer(id: $id) {
+        ...TimeEntryFields
+    }
+}
+
+mutation CreateTimeEntry($input: CreateTimeEntryInput!) {
+    createTimeEntry(input: $input) {
+        ...TimeEntryFields
+    }
+}
+
+mutation UpdateTimeEntry($id: ID!, $input: UpdateTimeEntryInput!) {
+    updateTimeEntry(id: $id, input: $input) {
+        ...TimeEntryFields
+    }
+}
+
+mutation DeleteTimeEntry($id: ID!) {
+    deleteTimeEntry(id: $id)
+}

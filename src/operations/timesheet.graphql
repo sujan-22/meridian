@@ -1,0 +1,31 @@
+query TimesheetWeek($weekStart: Date!, $weekEnd: Date!) {
+    timesheetWeek(weekStart: $weekStart, weekEnd: $weekEnd) {
+        weekStart
+        weekEnd
+        targetMinutes
+        completedAt
+        isComplete
+    }
+}
+
+mutation MarkTimeEntriesTransferred($ids: [ID!]!, $transferred: Boolean!) {
+    markTimeEntriesTransferred(ids: $ids, transferred: $transferred) {
+        ...TimeEntryFields
+    }
+}
+
+mutation CompleteTimesheetWeek($weekStart: Date!, $weekEnd: Date!) {
+    completeTimesheetWeek(weekStart: $weekStart, weekEnd: $weekEnd) {
+        weekStart
+        completedAt
+        isComplete
+    }
+}
+
+mutation ReopenTimesheetWeek($weekStart: Date!, $weekEnd: Date!) {
+    reopenTimesheetWeek(weekStart: $weekStart, weekEnd: $weekEnd) {
+        weekStart
+        completedAt
+        isComplete
+    }
+}
