@@ -202,7 +202,7 @@ function EstimateForm({ ticket, onDone }: EstimateFormProps) {
                     </label>
                 </div>
 
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[0.6875rem] text-muted-foreground">
                     Quoted as a range like 20–35? Put both in. Remaining hours
                     and warnings are measured against the high end.
                 </p>

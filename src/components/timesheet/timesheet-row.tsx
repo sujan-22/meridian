@@ -60,23 +60,23 @@ export function TimesheetRow({
             <div className={cn("min-w-0 flex-1", entered && "opacity-55")}>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     {row.ticketNumber ? (
-                        <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground/80">
+                        <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.6875rem] text-foreground/80">
                             #{row.ticketNumber}
                         </span>
                     ) : row.isMeeting ? (
-                        <span className="flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground/80">
+                        <span className="flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[0.6875rem] text-foreground/80">
                             <Users className="size-3" />
                             Meeting
                         </span>
                     ) : null}
 
                     {row.entries.length > 1 && (
-                        <span className="text-[11px] text-muted-foreground">
+                        <span className="text-[0.6875rem] text-muted-foreground">
                             {row.entries.length} sessions
                         </span>
                     )}
 
-                    <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+                    <span className="font-mono text-[0.6875rem] tabular-nums text-muted-foreground">
                         {formatTimeOfDay(row.entries[0].startedAt)}
                         {row.entries.length > 1 &&
                             ` – ${formatTimeOfDay(
@@ -94,7 +94,7 @@ export function TimesheetRow({
                         {row.entries.map((entry) => (
                             <li
                                 key={entry.id}
-                                className="flex gap-2 text-[11px] text-muted-foreground"
+                                className="flex gap-2 text-[0.6875rem] text-muted-foreground"
                             >
                                 <span className="font-mono tabular-nums">
                                     {formatMinutesAsHours(
@@ -164,7 +164,7 @@ function CopyButton({ label, icon, copied, onClick }: CopyButtonProps) {
             aria-label={`Copy ${label}`}
             onClick={onClick}
             className={cn(
-                "h-7 gap-1 font-mono text-[11px]",
+                "h-7 gap-1 font-mono text-[0.6875rem]",
                 copied && "border-emerald-500/60 text-emerald-400",
             )}
         >

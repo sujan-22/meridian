@@ -62,7 +62,7 @@ export function TicketsView() {
         .sort(compareTickets);
 
     return (
-        <div className="mx-auto flex w-full max-w-[1400px] flex-1 flex-col px-5 py-6 lg:px-8">
+        <div className="flex w-full flex-1 flex-col px-5 py-6 lg:px-8 2xl:px-10">
             <header className="mb-5">
                 <h2 className="text-xl font-semibold tracking-tight">
                     Tickets
@@ -221,7 +221,7 @@ function TicketCard({ ticket, onEdit }: TicketCardProps) {
                         <StatusChip status={ticket.status} />
                     </div>
 
-                    <p className="mt-1 text-[11px] text-muted-foreground">
+                    <p className="mt-1 text-[0.6875rem] text-muted-foreground">
                         {ticket.entryCount}{" "}
                         {ticket.entryCount === 1 ? "entry" : "entries"}
                         {ticket.lastTrackedAt &&
@@ -251,7 +251,7 @@ function TicketCard({ ticket, onEdit }: TicketCardProps) {
                         {max != null && (
                             <p
                                 className={cn(
-                                    "text-[11px] tabular-nums",
+                                    "text-[0.6875rem] tabular-nums",
                                     ticket.status === "OVER"
                                         ? "text-destructive"
                                         : ticket.status === "NEARING"
@@ -320,7 +320,7 @@ function StatusChip({ status }: { status: string }) {
     return (
         <span
             className={cn(
-                "rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide",
+                "rounded px-1.5 py-0.5 text-[0.625rem] uppercase tracking-wide",
                 status === "OVER"
                     ? "bg-destructive/15 text-destructive"
                     : status === "NEARING"

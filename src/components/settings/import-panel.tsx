@@ -211,7 +211,7 @@ export function ImportPanel() {
                         />
                     </div>
 
-                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                    <p className="text-[0.6875rem] leading-relaxed text-muted-foreground">
                         Projects in the file that don&apos;t exist yet will be
                         created, along with their clients. The export marks
                         everything non-billable, so each entry takes its
@@ -238,7 +238,7 @@ export function ImportPanel() {
                         {preview.projectNames.map((name) => (
                             <span
                                 key={name}
-                                className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-foreground/70"
+                                className="rounded bg-muted px-1.5 py-0.5 text-[0.625rem] text-foreground/70"
                             >
                                 {name}
                             </span>
@@ -278,7 +278,7 @@ export function ImportPanel() {
 function Fact({ label, value }: { label: string; value: string }) {
     return (
         <div>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+            <p className="text-[0.6875rem] uppercase tracking-[0.12em] text-muted-foreground">
                 {label}
             </p>
 

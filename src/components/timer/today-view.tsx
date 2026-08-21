@@ -131,7 +131,7 @@ export function TodayView() {
     }
 
     return (
-        <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col px-5 py-6 lg:px-8">
+        <div className="flex w-full flex-1 flex-col px-5 py-6 lg:px-8 2xl:px-10">
             <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                     <h2 className="text-xl font-semibold tracking-tight">

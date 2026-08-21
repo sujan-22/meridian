@@ -20,7 +20,7 @@ export function RecentStrip({ entries, onContinue }: RecentStripProps) {
 
     return (
         <div className="flex flex-col gap-2">
-            <p className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            <p className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                 Continue
             </p>
 
@@ -47,7 +47,7 @@ export function RecentStrip({ entries, onContinue }: RecentStripProps) {
                                     {entry.description}
                                 </span>
 
-                                <span className="block truncate text-[11px] text-muted-foreground">
+                                <span className="block truncate text-[0.6875rem] text-muted-foreground">
                                     {entry.project.name}
                                     {" · "}
                                     {formatDistanceToNowStrict(

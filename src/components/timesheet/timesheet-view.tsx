@@ -163,7 +163,7 @@ export function TimesheetView() {
         : days;
 
     return (
-        <div className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col px-5 py-6 lg:px-8">
+        <div className="flex w-full flex-1 flex-col px-5 py-6 lg:px-8 2xl:px-10">
             <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
                 <div className="min-w-0">
                     <h2 className="text-xl font-semibold tracking-tight">
@@ -263,7 +263,7 @@ export function TimesheetView() {
                                 </h3>
 
                                 <div className="flex items-center gap-3">
-                                    <span className="text-[11px] text-muted-foreground">
+                                    <span className="text-[0.6875rem] text-muted-foreground">
                                         {day.enteredCount}/{day.entryCount}{" "}
                                         entered
                                     </span>
@@ -320,21 +320,21 @@ export function TimesheetView() {
                                                 {group.project.name}
                                             </span>
 
-                                            <span className="text-[11px] text-muted-foreground">
+                                            <span className="text-[0.6875rem] text-muted-foreground">
                                                 {group.project.client
                                                     .shortName ??
                                                     group.project.client.name}
                                             </span>
 
                                             {group.project.polarisTask && (
-                                                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-foreground/70">
+                                                <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.625rem] text-foreground/70">
                                                     {group.project.polarisTask}
                                                 </span>
                                             )}
 
                                             <span
                                                 className={cn(
-                                                    "flex items-center gap-1 text-[11px]",
+                                                    "flex items-center gap-1 text-[0.6875rem]",
                                                     group.billingType ===
                                                         "BILLABLE"
                                                         ? "text-emerald-400"
@@ -482,7 +482,7 @@ interface StatProps {
 function Stat({ label, value, suffix }: StatProps) {
     return (
         <div>
-            <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+            <p className="text-[0.6875rem] uppercase tracking-[0.12em] text-muted-foreground">
                 {label}
             </p>
 

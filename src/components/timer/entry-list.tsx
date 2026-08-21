@@ -167,13 +167,13 @@ function EntryRow({
                     </span>
 
                     {isMeeting ? (
-                        <span className="flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[11px] text-foreground/80">
+                        <span className="flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[0.6875rem] text-foreground/80">
                             <Users className="size-3" />
                             Meeting
                         </span>
                     ) : (
                         entry.ticketNumber && (
-                            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground/80">
+                            <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.6875rem] text-foreground/80">
                                 #{entry.ticketNumber}
                             </span>
                         )

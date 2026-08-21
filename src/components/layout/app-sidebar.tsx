@@ -92,8 +92,10 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" className="border-sidebar-border">
-            <SidebarHeader className="border-b border-sidebar-border">
-                <div className="flex h-12 items-center gap-3 px-2">
+            {/* h-14 with no padding of its own, so this border lands on
+                exactly the same line as the topbar's. */}
+            <SidebarHeader className="h-14 justify-center border-b border-sidebar-border p-0">
+                <div className="flex items-center gap-3 px-2">
                     <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm shadow-primary/20">
                         <Logo className="size-4.5" />
                     </div>
@@ -103,7 +105,7 @@ export function AppSidebar() {
                             Quanta
                         </p>
 
-                        <p className="truncate text-[11px] text-muted-foreground">
+                        <p className="truncate text-[0.6875rem] text-muted-foreground">
                             Quarter-hour time tracking
                         </p>
                     </div>
