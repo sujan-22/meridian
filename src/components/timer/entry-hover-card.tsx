@@ -73,7 +73,7 @@ export function EntryHoverCard({
                                 </span>
                             ) : (
                                 entry.ticketNumber && (
-                                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground/80">
+                                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.6875rem] text-foreground/80">
                                         #{entry.ticketNumber}
                                     </span>
                                 )

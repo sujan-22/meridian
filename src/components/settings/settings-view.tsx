@@ -9,7 +9,7 @@ export function SettingsView() {
     const { preferences, loading } = usePreferences();
 
     return (
-        <div className="mx-auto w-full max-w-2xl px-5 py-6 lg:px-8">
+        <div className="mx-auto w-full max-w-[1600px] px-5 py-6 lg:px-8 2xl:px-10">
             <header className="mb-6">
                 <h2 className="text-xl font-semibold tracking-tight">
                     Settings
@@ -27,7 +27,7 @@ export function SettingsView() {
                     <Skeleton className="h-10 w-full rounded-lg" />
                 </div>
             ) : (
-                <div className="flex flex-col gap-4">
+                <div className="grid gap-4 xl:grid-cols-2 xl:items-start">
                     <div className="rounded-xl border border-border/70 bg-card p-5">
                         <PreferencesForm
                             key={JSON.stringify(preferences)}

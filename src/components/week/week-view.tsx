@@ -178,7 +178,7 @@ export function WeekView() {
     }
 
     return (
-        <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col px-5 py-6 lg:px-8">
+        <div className="flex w-full flex-1 flex-col px-5 py-6 lg:px-8 2xl:px-10">
             <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
                 <div className="min-w-0">
                     <h2 className="text-xl font-semibold tracking-tight">
@@ -350,7 +350,7 @@ function WeekTotal({ trackedMinutes, targetMinutes }: WeekTotalProps) {
     return (
         <div className="w-44">
             <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                <span className="text-[0.6875rem] uppercase tracking-[0.12em] text-muted-foreground">
                     Week
                 </span>
 

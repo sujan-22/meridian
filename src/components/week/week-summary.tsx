@@ -95,7 +95,7 @@ function DayCell({ day, onSelect }: DayCellProps) {
             <span className="flex items-baseline justify-between gap-1">
                 <span
                     className={cn(
-                        "text-[11px] uppercase tracking-wide",
+                        "text-[0.6875rem] uppercase tracking-wide",
                         day.isToday
                             ? "font-medium text-primary"
                             : "text-muted-foreground",
@@ -104,7 +104,7 @@ function DayCell({ day, onSelect }: DayCellProps) {
                     {format(day.date, "EEE")}
                 </span>
 
-                <span className="text-[11px] tabular-nums text-muted-foreground">
+                <span className="text-[0.6875rem] tabular-nums text-muted-foreground">
                     {format(day.date, "d")}
                 </span>
             </span>
@@ -124,7 +124,7 @@ function DayCell({ day, onSelect }: DayCellProps) {
                 )}
 
                 {shortfall > 0 && (
-                    <span className="shrink-0 font-mono text-[10px] tabular-nums text-amber-400">
+                    <span className="shrink-0 font-mono text-[0.625rem] tabular-nums text-amber-400">
                         −{formatMinutesAsHours(shortfall)}
                     </span>
                 )}

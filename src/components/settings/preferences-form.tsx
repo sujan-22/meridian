@@ -229,7 +229,7 @@ export function PreferencesForm({
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
     return (
-        <h3 className="text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+        <h3 className="text-[0.6875rem] font-medium uppercase tracking-[0.14em] text-muted-foreground">
             {children}
         </h3>
     );
@@ -249,7 +249,7 @@ function Field({ label, hint, children }: FieldProps) {
             {children}
 
             {hint && (
-                <span className="text-[11px] text-muted-foreground">
+                <span className="text-[0.6875rem] text-muted-foreground">
                     {hint}
                 </span>
             )}
@@ -298,7 +298,7 @@ function ToggleRow({ label, hint, checked, onChange }: ToggleRowProps) {
         <div className="flex items-center justify-between gap-4">
             <div className="min-w-0">
                 <p className="text-xs font-medium">{label}</p>
-                <p className="text-[11px] text-muted-foreground">{hint}</p>
+                <p className="text-[0.6875rem] text-muted-foreground">{hint}</p>
             </div>
 
             <button

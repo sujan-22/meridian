@@ -216,8 +216,8 @@ export function WeekCalendar({
                                     className={cn(
                                         "absolute right-2 font-mono tabular-nums",
                                         tick.isHour
-                                            ? "text-[10px] text-muted-foreground"
-                                            : "text-[9px] text-muted-foreground/55",
+                                            ? "text-[0.625rem] text-muted-foreground"
+                                            : "text-[0.5625rem] text-muted-foreground/55",
                                         // The topmost label would be clipped
                                         // if it were centred on the line.
                                         index === 0
@@ -511,7 +511,7 @@ function EntryBlock({
                         backgroundColor: `color-mix(in oklab, ${color} 26%, transparent)`,
                     }}
                 >
-                    <span className="block truncate text-[11px] font-medium leading-tight text-foreground">
+                    <span className="block truncate text-[0.6875rem] font-medium leading-tight text-foreground">
                         {entry.kind === "MEETING" && (
                             <Users className="mr-1 inline size-2.5 align-[-1px]" />
                         )}
@@ -519,7 +519,7 @@ function EntryBlock({
                     </span>
 
                     {!compact && (
-                        <span className="mt-0.5 block truncate text-[10px] leading-tight text-foreground/60">
+                        <span className="mt-0.5 block truncate text-[0.625rem] leading-tight text-foreground/60">
                             {formatMinutesAsHours(entryBilledMinutes(entry))} h
                             {" · "}
                             {entry.project.name}

@@ -63,7 +63,7 @@ export function DayTotal({
     return (
         <div className="w-full sm:w-64">
             <div className="flex items-baseline justify-between gap-3">
-                <span className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+                <span className="text-[0.6875rem] uppercase tracking-[0.12em] text-muted-foreground">
                     Today
                 </span>
 
@@ -91,7 +91,7 @@ export function DayTotal({
                 />
             </div>
 
-            <div className="mt-2 flex items-center justify-between gap-3 text-[11px]">
+            <div className="mt-2 flex items-center justify-between gap-3 text-[0.6875rem]">
                 <span className="flex items-center gap-1.5 text-muted-foreground">
                     <span
                         aria-hidden

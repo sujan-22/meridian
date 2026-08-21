@@ -136,6 +136,27 @@
         color: var(--foreground);
     }
 
+    /* Everything is sized in rem, so lifting the root scales the whole UI -
+       type, controls, the sidebar - together. Without this the interface
+       shrinks into the middle of a large display and stops being readable. */
+    @media (min-width: 1920px) {
+        html {
+            font-size: 17px;
+        }
+    }
+
+    @media (min-width: 2560px) {
+        html {
+            font-size: 18px;
+        }
+    }
+
+    @media (min-width: 3200px) {
+        html {
+            font-size: 19px;
+        }
+    }
+
     body {
         min-height: 100svh;
         background: var(--background);

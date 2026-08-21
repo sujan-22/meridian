@@ -103,7 +103,7 @@ export function ProjectsView() {
     }
 
     return (
-        <div className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col px-5 py-6 lg:px-8">
+        <div className="flex w-full flex-1 flex-col px-5 py-6 lg:px-8 2xl:px-10">
             <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
                 <div>
                     <h2 className="text-xl font-semibold tracking-tight">
@@ -269,7 +269,7 @@ function ProjectRow({
                     <span className="truncate font-medium">{project.name}</span>
 
                     {project.archived && (
-                        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[0.625rem] uppercase tracking-wide text-muted-foreground">
                             Archived
                         </span>
                     )}
@@ -318,7 +318,7 @@ function ProjectRow({
                     {formatMinutesAsHours(summary.totalMinutes)}
                 </span>
 
-                <span className="block text-[10px] text-muted-foreground">
+                <span className="block text-[0.625rem] text-muted-foreground">
                     {summary.lastTrackedAt
                         ? formatDistanceToNowStrict(
                               new Date(summary.lastTrackedAt),
