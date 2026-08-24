@@ -18,6 +18,8 @@
         "db:migrate": "drizzle-kit migrate",
         "db:studio": "drizzle-kit studio",
         "db:seed": "tsx scripts/seed.ts",
+        "test:setup": "./scripts/test-server.sh",
+        "test:serve": "./scripts/test-server.sh --serve",
         "codegen": "graphql-codegen --config codegen.ts",
         "codegen:watch": "graphql-codegen --config codegen.ts --watch"
     },

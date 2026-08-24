@@ -30,6 +30,13 @@ export interface SelectableProject {
 
 interface ProjectSelectProps {
     projects: readonly SelectableProject[];
+    /**
+     * The project already on the entry. Archived projects are kept out of the
+     * list, but an entry that still points at one has to keep showing it -
+     * otherwise editing anything else about that entry would silently move it
+     * to a different project.
+     */
+    keepSelectable?: SelectableProject | null;
     value: string | null;
     onChange: (projectId: string | null) => void;
     loading?: boolean;
@@ -41,6 +48,7 @@ interface ProjectSelectProps {
 /** Projects grouped under their client, each with its tracking colour. */
 export function ProjectSelect({
     projects,
+    keepSelectable,
     value,
     onChange,
     loading = false,
@@ -48,7 +56,13 @@ export function ProjectSelect({
     className,
     triggerClassName,
 }: ProjectSelectProps) {
-    const groups = groupByClient(projects);
+    const options =
+        keepSelectable &&
+        !projects.some((project) => project.id === keepSelectable.id)
+            ? [...projects, keepSelectable]
+            : projects;
+
+    const groups = groupByClient(options);
 
     let placeholder = "Select project";
 
@@ -60,7 +74,7 @@ export function ProjectSelect({
         placeholder = "Failed to load projects";
     }
 
-    const items = projects.map((project) => ({
+    const items = options.map((project) => ({
         label: project.name,
         value: project.id,
     }));
