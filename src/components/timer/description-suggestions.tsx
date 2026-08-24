@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@apollo/client/react";
 import { format } from "date-fns";
 
@@ -42,13 +42,21 @@ export function DescriptionSuggestions({
         skip: term.length < MIN_QUERY,
     });
 
-    const suggestions = (data?.descriptionSuggestions ??
-        []) as TimeEntryFieldsFragment[];
+    // A stable reference, so the key handler below is not rebound each render.
+    const suggestions = useMemo(
+        () => (data?.descriptionSuggestions ?? []) as TimeEntryFieldsFragment[],
+        [data],
+    );
 
     // Typing changes the list underneath the cursor, so start from the top.
-    useEffect(() => {
+    // Adjusted during render rather than in an effect - React re-renders
+    // before painting, so there is no flash of the stale highlight.
+    const [lastTerm, setLastTerm] = useState(term);
+
+    if (term !== lastTerm) {
+        setLastTerm(term);
         setHighlighted(0);
-    }, [term]);
+    }
 
     useEffect(() => {
         if (!open) {

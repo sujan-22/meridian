@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/hover-card";
 import type { TimeEntryFieldsFragment } from "@/gql/graphql";
 import { formatTimeOfDay } from "@/lib/dates";
-import { entryBilledMinutes, formatMinutesAsHours } from "@/lib/duration";
+import { BillableSplit } from "@/components/timer/billable-split";
 import { projectColor } from "@/lib/project-color";
 import { cn } from "@/lib/utils";
 
@@ -89,12 +89,11 @@ export function EntryHoverCard({
                                     : "now"}
                             </span>
 
-                            <span className="font-medium text-foreground">
-                                {formatMinutesAsHours(
-                                    entryBilledMinutes(entry),
-                                )}{" "}
-                                h
-                            </span>
+                            <BillableSplit
+                                billableMinutes={entry.billableMinutes}
+                                unbillableMinutes={entry.unbillableMinutes}
+                                className="font-medium text-foreground"
+                            />
 
                             <span
                                 className={cn(
