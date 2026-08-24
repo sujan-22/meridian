@@ -32,6 +32,16 @@ export const timeEntries = pgTable(
 
         kind: entryKindEnum("kind").default("work").notNull(),
 
+        /**
+         * Share of a billable entry that is written off, 0-100.
+         *
+         * Polaris only accepts quarter hours, so the split is resolved to
+         * whole quarters that add back up to the tracked total - see
+         * `splitBillableMinutes`. Ignored when the entry is wholly
+         * non-billable.
+         */
+        unbillablePercent: integer("unbillable_percent").default(0).notNull(),
+
         startedAt: timestamp("started_at", {
             withTimezone: true,
         }).notNull(),
@@ -44,7 +54,13 @@ export const timeEntries = pgTable(
 
         timesheetDurationMinutes: integer("timesheet_duration_minutes"),
 
+        /** The billable half of a split entry, or the whole of a plain one. */
         timesheetEnteredAt: timestamp("timesheet_entered_at", {
+            withTimezone: true,
+        }),
+
+        /** Only used by the written-off half of a split entry. */
+        nonBillableEnteredAt: timestamp("non_billable_entered_at", {
             withTimezone: true,
         }),
 

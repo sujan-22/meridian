@@ -9,6 +9,7 @@ import {
     ProjectSelect,
     type SelectableProject,
 } from "@/components/timer/project-select";
+import { DescriptionSuggestions } from "@/components/timer/description-suggestions";
 import { KindToggle } from "@/components/timer/kind-toggle";
 import { LiveClock } from "@/components/timer/live-clock";
 import { useEntryActions } from "@/components/timer/use-entry-actions";
@@ -96,6 +97,8 @@ function IdleComposer({
     const [projectPinned, setProjectPinned] = useState(false);
     const [ticketPinned, setTicketPinned] = useState(false);
 
+    const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+
     const { startTimer, pending } = useEntryActions();
 
     const selectedProject = projects.find(
@@ -155,16 +158,19 @@ function IdleComposer({
     return (
         <div className="p-5 lg:p-6">
             <div className="flex flex-col gap-5">
-                <div>
+                <div className="relative">
                     <p className="mb-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         What are you working on?
                     </p>
 
                     <Input
                         value={draft.description}
-                        onChange={(event) =>
-                            handleDescriptionChange(event.target.value)
-                        }
+                        onChange={(event) => {
+                            setSuggestionsOpen(true);
+                            handleDescriptionChange(event.target.value);
+                        }}
+                        onFocus={() => setSuggestionsOpen(true)}
+                        onBlur={() => setSuggestionsOpen(false)}
                         onKeyDown={(event) => {
                             if (event.key === "Enter") {
                                 event.preventDefault();
@@ -177,6 +183,24 @@ function IdleComposer({
                         placeholder="Gardner 14214 - Review order history"
                         autoComplete="off"
                         className={DESCRIPTION_INPUT_CLASS}
+                    />
+
+                    <DescriptionSuggestions
+                        query={draft.description}
+                        open={suggestionsOpen}
+                        onDismiss={() => setSuggestionsOpen(false)}
+                        onPick={(entry) => {
+                            setSuggestionsOpen(false);
+                            setProjectPinned(true);
+                            setTicketPinned(true);
+
+                            onDraftChange({
+                                description: entry.description,
+                                projectId: entry.project.id,
+                                ticketNumber: entry.ticketNumber ?? "",
+                                kind: entry.kind,
+                            });
+                        }}
                     />
                 </div>
 

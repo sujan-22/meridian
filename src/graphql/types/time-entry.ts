@@ -1,5 +1,9 @@
 import type { TimeEntryWithProject } from "@/db/queries/time-entries";
-import { entryBilledMinutes, entryDurationSeconds } from "@/lib/duration";
+import {
+    entryBilledMinutes,
+    entryDurationSeconds,
+    splitBillableMinutes,
+} from "@/lib/duration";
 
 import type { AppBuilder } from "../builder";
 
@@ -36,6 +40,9 @@ export function timeEntryRef(
                 type: refs.EntryKind,
                 resolve: (entry) => entry.kind,
             }),
+
+            /** Share of a billable entry written off, 0-100. */
+            unbillablePercent: t.exposeInt("unbillablePercent"),
 
             startedAt: t.field({
                 type: "DateTime",
@@ -83,6 +90,31 @@ export function timeEntryRef(
                 type: "DateTime",
                 nullable: true,
                 resolve: (entry) => entry.timesheetEnteredAt,
+            }),
+
+            nonBillableEnteredAt: t.field({
+                type: "DateTime",
+                nullable: true,
+                resolve: (entry) => entry.nonBillableEnteredAt,
+            }),
+
+            /** Quarter-aligned halves that add back up to `billedMinutes`. */
+            billableMinutes: t.int({
+                resolve: (entry) =>
+                    splitBillableMinutes(
+                        entryBilledMinutes(entry),
+                        entry.unbillablePercent,
+                        entry.billingType === "billable",
+                    ).billableMinutes,
+            }),
+
+            unbillableMinutes: t.int({
+                resolve: (entry) =>
+                    splitBillableMinutes(
+                        entryBilledMinutes(entry),
+                        entry.unbillablePercent,
+                        entry.billingType === "billable",
+                    ).unbillableMinutes,
             }),
 
             project: t.field({

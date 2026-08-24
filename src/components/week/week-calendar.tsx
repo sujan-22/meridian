@@ -30,9 +30,9 @@ import { cn } from "@/lib/utils";
  * readable - quarter-hour lines only appear once there is room to label them.
  */
 export const ZOOM_LEVELS = [
-    { hourHeight: 72, tickMinutes: 60 },
-    { hourHeight: 108, tickMinutes: 30 },
-    { hourHeight: 152, tickMinutes: 15 },
+    { hourHeight: 104, tickMinutes: 60 },
+    { hourHeight: 156, tickMinutes: 30 },
+    { hourHeight: 224, tickMinutes: 15 },
 ] as const;
 
 export const DEFAULT_ZOOM = 1;
@@ -56,6 +56,8 @@ interface WeekCalendarProps {
     onContinueEntry: (entry: TimeEntryFieldsFragment) => void;
     onDeleteEntry: (entry: TimeEntryFieldsFragment) => void;
     onSelectSlot: (day: Date, minuteOfDay: number) => void;
+    /** A range swept out on empty grid. */
+    onSelectRange: (day: Date, startMinute: number, endMinute: number) => void;
     onMoveEntry: (
         entry: TimeEntryFieldsFragment,
         startedAt: Date,
@@ -81,6 +83,7 @@ export function WeekCalendar({
     onContinueEntry,
     onDeleteEntry,
     onSelectSlot,
+    onSelectRange,
     onMoveEntry,
 }: WeekCalendarProps) {
     // Minute resolution is enough here - a per-second tick would re-lay-out
@@ -93,6 +96,13 @@ export function WeekCalendar({
     const [selected, setSelected] = useState<{
         entry: TimeEntryFieldsFragment;
         anchor: PopoverAnchor;
+    } | null>(null);
+
+    /** The block being swept out on empty grid, before it becomes an entry. */
+    const [sketch, setSketch] = useState<{
+        dayIndex: number;
+        startMinute: number;
+        endMinute: number;
     } | null>(null);
 
     const placements: Placement[] = [];
@@ -250,6 +260,16 @@ export function WeekCalendar({
                                 now={now}
                                 onSelectSlot={onSelectSlot}
                                 onBeginDrag={begin}
+                                sketch={
+                                    sketch?.dayIndex === dayIndex
+                                        ? sketch
+                                        : null
+                                }
+                                onSketch={setSketch}
+                                onSketchDone={(day, from, to) => {
+                                    setSketch(null);
+                                    onSelectRange(day, from, to);
+                                }}
                             />
                         ))}
                     </div>
@@ -333,6 +353,15 @@ interface DayColumnProps {
         entryId: string,
         placement: EntryPlacement,
     ) => void;
+    sketch: { startMinute: number; endMinute: number } | null;
+    onSketch: (
+        sketch: {
+            dayIndex: number;
+            startMinute: number;
+            endMinute: number;
+        } | null,
+    ) => void;
+    onSketchDone: (day: Date, startMinute: number, endMinute: number) => void;
 }
 
 function DayColumn({
@@ -348,6 +377,9 @@ function DayColumn({
     now,
     onSelectSlot,
     onBeginDrag,
+    sketch,
+    onSketch,
+    onSketchDone,
 }: DayColumnProps) {
     const isToday = day.toDateString() === today.toDateString();
     const positioned = layoutDay(placements);
@@ -355,16 +387,80 @@ function DayColumn({
     const minutesFromTop = (minute: number) =>
         ((minute - startHour * 60) / 60) * hourHeight;
 
-    function handleBackgroundClick(event: React.MouseEvent<HTMLDivElement>) {
-        const bounds = event.currentTarget.getBoundingClientRect();
-
+    /** Pointer position -> the quarter-hour line nearest to it. */
+    function minuteAt(clientY: number, bounds: DOMRect): number {
         const minute =
-            startHour * 60 + ((event.clientY - bounds.top) / hourHeight) * 60;
+            startHour * 60 + ((clientY - bounds.top) / hourHeight) * 60;
 
-        onSelectSlot(
-            day,
-            Math.max(0, Math.round(minute / QUARTER_MINUTES) * QUARTER_MINUTES),
+        return Math.max(
+            0,
+            Math.min(
+                MINUTES_PER_DAY,
+                Math.round(minute / QUARTER_MINUTES) * QUARTER_MINUTES,
+            ),
         );
+    }
+
+    /**
+     * Sweeping down empty grid draws the block as it goes and opens Add with
+     * that range; a press that never moves is treated as a plain click.
+     */
+    function handleBackgroundPointerDown(
+        event: React.PointerEvent<HTMLDivElement>,
+    ) {
+        if (event.button !== 0) {
+            return;
+        }
+
+        const bounds = event.currentTarget.getBoundingClientRect();
+        const anchorMinute = minuteAt(event.clientY, bounds);
+
+        let moved = false;
+
+        const handleMove = (moveEvent: PointerEvent) => {
+            const current = minuteAt(moveEvent.clientY, bounds);
+
+            if (!moved && current === anchorMinute) {
+                return;
+            }
+
+            moved = true;
+
+            onSketch({
+                dayIndex,
+                startMinute: Math.min(anchorMinute, current),
+                endMinute: Math.max(
+                    anchorMinute + QUARTER_MINUTES,
+                    Math.max(current, anchorMinute),
+                ),
+            });
+        };
+
+        const finish = (upEvent: PointerEvent) => {
+            window.removeEventListener("pointermove", handleMove);
+            window.removeEventListener("pointerup", finish);
+
+            if (!moved) {
+                onSketch(null);
+                onSelectSlot(day, anchorMinute);
+
+                return;
+            }
+
+            const end = minuteAt(upEvent.clientY, bounds);
+
+            onSketchDone(
+                day,
+                Math.min(anchorMinute, end),
+                Math.max(
+                    Math.min(anchorMinute, end) + QUARTER_MINUTES,
+                    Math.max(anchorMinute, end),
+                ),
+            );
+        };
+
+        window.addEventListener("pointermove", handleMove);
+        window.addEventListener("pointerup", finish);
     }
 
     const nowDate = now === null ? null : new Date(now);
@@ -391,8 +487,8 @@ function DayColumn({
                 role="button"
                 tabIndex={-1}
                 aria-label={`Add time on ${format(day, "EEEE d MMMM")}`}
-                onClick={handleBackgroundClick}
-                className="absolute inset-0 cursor-copy"
+                onPointerDown={handleBackgroundPointerDown}
+                className="absolute inset-0 cursor-copy select-none"
             >
                 {ticks.map((tick, index) => (
                     <div
@@ -429,6 +525,24 @@ function DayColumn({
                     onBeginDrag={onBeginDrag}
                 />
             ))}
+
+            {sketch && (
+                <div
+                    aria-hidden
+                    className="pointer-events-none absolute inset-x-0.5 z-20 rounded-md border border-dashed border-primary bg-primary/20 px-1.5 py-1"
+                    style={{
+                        top: `${minutesFromTop(sketch.startMinute)}px`,
+                        height: `${((sketch.endMinute - sketch.startMinute) / 60) * hourHeight}px`,
+                    }}
+                >
+                    <span className="font-mono text-[0.625rem] tabular-nums text-foreground">
+                        {formatMinutesAsHours(
+                            sketch.endMinute - sketch.startMinute,
+                        )}{" "}
+                        h
+                    </span>
+                </div>
+            )}
 
             {showNowLine && (
                 <div
@@ -479,6 +593,19 @@ function EntryBlock({
 
     const compact = height < 46;
 
+    // A quarter hour stays on one line with an ellipsis; anything half an hour
+    // or longer gets as many lines as its block can hold, so the description
+    // is not cut off at a handful of words when there is room to show it.
+    const durationMinutes = endMinute - startMinute;
+
+    const LINE_HEIGHT = 14;
+    const CHROME = compact ? 4 : 24;
+
+    const descriptionLines =
+        durationMinutes < 2 * QUARTER_MINUTES
+            ? 1
+            : Math.max(1, Math.floor((height - CHROME) / LINE_HEIGHT));
+
     return (
         <div
             data-entry-id={entry.id}
@@ -511,7 +638,21 @@ function EntryBlock({
                         backgroundColor: `color-mix(in oklab, ${color} 26%, transparent)`,
                     }}
                 >
-                    <span className="block truncate text-[0.6875rem] font-medium leading-tight text-foreground">
+                    <span
+                        className="block overflow-hidden text-[0.6875rem] font-medium leading-tight text-foreground"
+                        style={
+                            descriptionLines === 1
+                                ? {
+                                      whiteSpace: "nowrap",
+                                      textOverflow: "ellipsis",
+                                  }
+                                : {
+                                      display: "-webkit-box",
+                                      WebkitBoxOrient: "vertical",
+                                      WebkitLineClamp: descriptionLines,
+                                  }
+                        }
+                    >
                         {entry.kind === "MEETING" && (
                             <Users className="mr-1 inline size-2.5 align-[-1px]" />
                         )}

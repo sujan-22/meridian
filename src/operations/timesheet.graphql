@@ -8,8 +8,16 @@ query TimesheetWeek($weekStart: Date!, $weekEnd: Date!) {
     }
 }
 
-mutation MarkTimeEntriesTransferred($ids: [ID!]!, $transferred: Boolean!) {
-    markTimeEntriesTransferred(ids: $ids, transferred: $transferred) {
+mutation MarkTimeEntriesTransferred(
+    $ids: [ID!]!
+    $transferred: Boolean!
+    $portion: EntryPortion
+) {
+    markTimeEntriesTransferred(
+        ids: $ids
+        transferred: $transferred
+        portion: $portion
+    ) {
         ...TimeEntryFields
     }
 }

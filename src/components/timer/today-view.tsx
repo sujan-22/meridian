@@ -99,8 +99,13 @@ export function TodayView() {
      * copy can be adjusted before it lands - and parked in the next free slot
      * after the day's last entry so it never lands on top of existing work.
      */
+    /** Copies land on the same slot as the original, ready to be adjusted. */
     function handleDuplicate(entry: TimeEntryFieldsFragment) {
-        const startTime = nextFreeSlot(entries);
+        const started = new Date(entry.startedAt);
+
+        const startTime = `${String(started.getHours()).padStart(2, "0")}:${String(
+            started.getMinutes(),
+        ).padStart(2, "0")}`;
 
         setEditing(null);
         setPrefill({
@@ -109,6 +114,7 @@ export function TodayView() {
             ticketNumber: entry.ticketNumber ?? "",
             billingType: entry.billingType,
             kind: entry.kind,
+            unbillablePercent: entry.unbillablePercent,
             startTime,
             endTime: shiftQuarters(
                 startTime,
