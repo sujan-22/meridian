@@ -139,29 +139,26 @@ export function WeekView() {
 
     /** Clicking empty grid opens Add, pre-filled with the slot that was hit. */
     function openSlot(day: Date, minuteOfDay: number) {
+        openRange(day, minuteOfDay, minuteOfDay + 60);
+    }
+
+    /** Sweeping out a range opens Add for exactly what was drawn. */
+    function openRange(day: Date, startMinute: number, endMinute: number) {
         setEditing(null);
         setDialogDay(day);
         setPrefill({
-            startTime: toTime(minuteOfDay),
-            endTime: toTime(minuteOfDay + 60),
+            startTime: toTime(startMinute),
+            endTime: toTime(endMinute),
         });
         setDialogOpen(true);
     }
 
+    /** Copies land on the same slot as the original, ready to be adjusted. */
     function duplicateEntry(entry: TimeEntryFieldsFragment) {
         const day = startOfDay(new Date(entry.startedAt));
+        const started = new Date(entry.startedAt);
 
-        const dayEntries = entriesByDay.get(day.toDateString()) ?? [];
-
-        const latestEnd = dayEntries.reduce((latest, item) => {
-            const end = item.endedAt ? new Date(item.endedAt) : null;
-
-            return end && (!latest || end > latest) ? end : latest;
-        }, null as Date | null);
-
-        const startMinute = latestEnd
-            ? latestEnd.getHours() * 60 + latestEnd.getMinutes()
-            : 9 * 60;
+        const startMinute = started.getHours() * 60 + started.getMinutes();
 
         setEditing(null);
         setDialogDay(day);
@@ -171,6 +168,7 @@ export function WeekView() {
             ticketNumber: entry.ticketNumber ?? "",
             billingType: entry.billingType,
             kind: entry.kind,
+            unbillablePercent: entry.unbillablePercent,
             startTime: toTime(startMinute),
             endTime: toTime(startMinute + entryBilledMinutes(entry)),
         });
@@ -305,6 +303,7 @@ export function WeekView() {
                         }
                         onDeleteEntry={(entry) => void deleteEntry(entry.id)}
                         onSelectSlot={openSlot}
+                        onSelectRange={openRange}
                         onMoveEntry={(entry, startedAt, endedAt) =>
                             void updateEntry(entry.id, {
                                 startedAt: startedAt.toISOString(),

@@ -146,3 +146,50 @@ export function entryBilledMinutes(
 
     return toQuarterMinutes(entryDurationSeconds(entry, now));
 }
+
+export interface BillableSplit {
+    billableMinutes: number;
+    unbillableMinutes: number;
+}
+
+/**
+ * Divide a tracked total into a billable and a written-off part.
+ *
+ * Polaris accepts nothing finer than a quarter hour, so the written-off share
+ * is snapped to whole quarters and the billable side takes the remainder.
+ * Both parts are therefore always quarter-aligned and always add back up to
+ * the total exactly - no drift, and never a figure like 1.53.
+ */
+export function splitBillableMinutes(
+    totalMinutes: number,
+    unbillablePercent: number,
+    isBillable: boolean,
+): BillableSplit {
+    const total = Math.max(0, totalMinutes);
+
+    if (!isBillable) {
+        return { billableMinutes: 0, unbillableMinutes: total };
+    }
+
+    const percent = Math.min(100, Math.max(0, unbillablePercent));
+
+    if (percent === 0) {
+        return { billableMinutes: total, unbillableMinutes: 0 };
+    }
+
+    if (percent === 100) {
+        return { billableMinutes: 0, unbillableMinutes: total };
+    }
+
+    const quarters = Math.round((total * percent) / 100 / QUARTER_MINUTES);
+
+    const unbillableMinutes = Math.min(
+        total,
+        quarters * QUARTER_MINUTES,
+    );
+
+    return {
+        billableMinutes: total - unbillableMinutes,
+        unbillableMinutes,
+    };
+}

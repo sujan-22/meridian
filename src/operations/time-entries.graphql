@@ -4,6 +4,7 @@ fragment TimeEntryFields on TimeEntry {
     ticketNumber
     billingType
     kind
+    unbillablePercent
     startedAt
     endedAt
     durationSeconds
@@ -12,6 +13,9 @@ fragment TimeEntryFields on TimeEntry {
     timesheetDurationMinutes
     billedMinutes
     timesheetEnteredAt
+    nonBillableEnteredAt
+    billableMinutes
+    unbillableMinutes
 
     project {
         id

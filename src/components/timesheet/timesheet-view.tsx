@@ -107,6 +107,8 @@ export function TimesheetView() {
             variables: {
                 ids: row.entries.map((entry) => entry.id),
                 transferred: entered,
+                portion:
+                    row.portion === "nonBillable" ? "NON_BILLABLE" : "BILLABLE",
             },
         });
     }
@@ -118,11 +120,26 @@ export function TimesheetView() {
             return;
         }
 
-        const ids = day.projects.flatMap((group) =>
-            group.rows.flatMap((row) => row.entries.map((entry) => entry.id)),
-        );
+        // Each side of a split entry carries its own flag, so a day is ticked
+        // off one portion at a time.
+        for (const portion of ["BILLABLE", "NON_BILLABLE"] as const) {
+            const ids = day.projects.flatMap((group) =>
+                group.rows
+                    .filter(
+                        (row) =>
+                            (row.portion === "nonBillable"
+                                ? "NON_BILLABLE"
+                                : "BILLABLE") === portion,
+                    )
+                    .flatMap((row) => row.entries.map((entry) => entry.id)),
+            );
 
-        await markTransferred({ variables: { ids, transferred: entered } });
+            if (ids.length > 0) {
+                await markTransferred({
+                    variables: { ids, transferred: entered, portion },
+                });
+            }
+        }
     }
 
     async function toggleWeekComplete() {

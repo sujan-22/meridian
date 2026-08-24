@@ -37,7 +37,11 @@ import type {
     TimeEntryFieldsFragment,
 } from "@/gql/graphql";
 import { withTimeOfDay } from "@/lib/dates";
-import { formatMinutesAsHours, toQuarterMinutes } from "@/lib/duration";
+import {
+    formatMinutesAsHours,
+    splitBillableMinutes,
+    toQuarterMinutes,
+} from "@/lib/duration";
 import { parseEntryDescription } from "@/lib/parse-entry";
 
 interface EntryDialogProps {
@@ -58,6 +62,7 @@ export interface EntryDraft {
     ticketNumber: string;
     billingType: BillingType | null;
     kind: EntryKind;
+    unbillablePercent: number;
     startTime: string;
     endTime: string;
 }
@@ -124,6 +129,9 @@ function EntryForm({
     const [kind, setKind] = useState<EntryKind>(
         entry?.kind ?? initial?.kind ?? "WORK",
     );
+    const [unbillablePercent, setUnbillablePercent] = useState(
+        String(entry?.unbillablePercent ?? initial?.unbillablePercent ?? 0),
+    );
 
     const [startTime, setStartTime] = useState(
         entry
@@ -141,6 +149,11 @@ function EntryForm({
     const { createEntry, updateEntry, pending } = useEntryActions();
 
     const range = resolveRange(day, startTime, endTime);
+
+    const percent = Math.min(
+        100,
+        Math.max(0, Math.round(Number(unbillablePercent) || 0)),
+    );
 
     const effectiveBilling =
         billingType ??
@@ -202,6 +215,7 @@ function EntryForm({
             ticketNumber: ticketNumber.trim() || null,
             billingType: effectiveBilling,
             kind,
+            unbillablePercent: percent,
             startedAt: range.startedAt.toISOString(),
             endedAt: range.endedAt.toISOString(),
         };
@@ -326,6 +340,36 @@ function EntryForm({
                     </Select>
                 </Field>
 
+                {effectiveBilling === "BILLABLE" && (
+                    <Field
+                        label="Written off"
+                        hint="The share of this entry the client is not charged for."
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="relative w-28">
+                                <Input
+                                    value={unbillablePercent}
+                                    onChange={(event) =>
+                                        setUnbillablePercent(event.target.value)
+                                    }
+                                    inputMode="numeric"
+                                    aria-label="Unbillable percent"
+                                    className="h-10 pr-7 font-mono tabular-nums"
+                                />
+
+                                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                                    %
+                                </span>
+                            </div>
+
+                            {range && <SplitPreview
+                                totalMinutes={range.billedMinutes}
+                                percent={percent}
+                            />}
+                        </div>
+                    </Field>
+                )}
+
                 {error && <p className="text-sm text-destructive">{error}</p>}
             </div>
 
@@ -347,12 +391,51 @@ function EntryForm({
     );
 }
 
+interface SplitPreviewProps {
+    totalMinutes: number;
+    percent: number;
+}
+
+/**
+ * Polaris only takes quarter hours, so show the two figures that will actually
+ * be typed in rather than the raw percentage of the total.
+ */
+function SplitPreview({ totalMinutes, percent }: SplitPreviewProps) {
+    const { billableMinutes, unbillableMinutes } = splitBillableMinutes(
+        totalMinutes,
+        percent,
+        true,
+    );
+
+    if (unbillableMinutes === 0) {
+        return (
+            <span className="text-xs text-muted-foreground">
+                All {formatMinutesAsHours(billableMinutes)} h billable
+            </span>
+        );
+    }
+
+    return (
+        <span className="flex items-center gap-1.5 font-mono text-xs tabular-nums">
+            <span className="text-emerald-400">
+                {formatMinutesAsHours(billableMinutes)}
+            </span>
+            <span className="text-muted-foreground">billable ·</span>
+            <span className="text-foreground">
+                {formatMinutesAsHours(unbillableMinutes)}
+            </span>
+            <span className="text-muted-foreground">not</span>
+        </span>
+    );
+}
+
 interface FieldProps {
     label: string;
+    hint?: string;
     children: React.ReactNode;
 }
 
-function Field({ label, children }: FieldProps) {
+function Field({ label, hint, children }: FieldProps) {
     return (
         <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-muted-foreground">
@@ -360,6 +443,12 @@ function Field({ label, children }: FieldProps) {
             </span>
 
             {children}
+
+            {hint && (
+                <span className="text-[0.6875rem] text-muted-foreground">
+                    {hint}
+                </span>
+            )}
         </label>
     );
 }

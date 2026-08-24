@@ -1,11 +1,15 @@
 "use client";
 
-import { Check, Copy, Hash, Users } from "lucide-react";
+import { Check, CircleDollarSign, Copy, Hash, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { formatTimeOfDay } from "@/lib/dates";
-import { entryBilledMinutes, formatMinutesAsHours } from "@/lib/duration";
-import type { TimesheetEntry, TimesheetRow as Row } from "@/lib/timesheet";
+import { formatMinutesAsHours } from "@/lib/duration";
+import {
+    portionMinutes,
+    type TimesheetEntry,
+    type TimesheetRow as Row,
+} from "@/lib/timesheet";
 import { cn } from "@/lib/utils";
 
 interface TimesheetRowProps {
@@ -70,6 +74,17 @@ export function TimesheetRow({
                         </span>
                     ) : null}
 
+                    {row.portion === "nonBillable" ? (
+                        <span className="rounded bg-muted px-1.5 py-0.5 text-[0.6875rem] text-muted-foreground">
+                            Written off
+                        </span>
+                    ) : (
+                        <span className="flex items-center gap-1 text-[0.6875rem] text-emerald-400">
+                            <CircleDollarSign className="size-3" />
+                            Billable
+                        </span>
+                    )}
+
                     {row.entries.length > 1 && (
                         <span className="text-[0.6875rem] text-muted-foreground">
                             {row.entries.length} sessions
@@ -98,7 +113,7 @@ export function TimesheetRow({
                             >
                                 <span className="font-mono tabular-nums">
                                     {formatMinutesAsHours(
-                                        entryBilledMinutes(entry),
+                                        portionMinutes(entry, row.portion),
                                     )}
                                 </span>
 

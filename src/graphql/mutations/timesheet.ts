@@ -15,6 +15,17 @@ import type { Refs } from "../refs";
 import { toTimesheetWeekModel } from "../types/timesheet-week";
 
 export function registerTimesheetMutations(builder: AppBuilder, refs: Refs) {
+    /**
+     * A split entry shows up on the timesheet as two lines, and each is typed
+     * into Polaris separately, so each is ticked off separately.
+     */
+    const EntryPortionRef = builder.enumType("EntryPortion", {
+        values: {
+            BILLABLE: { value: "billable" },
+            NON_BILLABLE: { value: "non_billable" },
+        } as const,
+    });
+
     builder.mutationFields((t) => ({
         /**
          * Ticks entries off as copied into Polaris. Takes a list because a
@@ -26,6 +37,7 @@ export function registerTimesheetMutations(builder: AppBuilder, refs: Refs) {
             args: {
                 ids: t.arg.idList({ required: true }),
                 transferred: t.arg.boolean({ required: true }),
+                portion: t.arg({ type: EntryPortionRef }),
             },
 
             resolve: async (_parent, args) => {
@@ -35,13 +47,15 @@ export function registerTimesheetMutations(builder: AppBuilder, refs: Refs) {
                     return [];
                 }
 
+                const at = args.transferred ? new Date() : null;
+
                 await db
                     .update(timeEntries)
-                    .set({
-                        timesheetEnteredAt: args.transferred
-                            ? new Date()
-                            : null,
-                    })
+                    .set(
+                        args.portion === "non_billable"
+                            ? { nonBillableEnteredAt: at }
+                            : { timesheetEnteredAt: at },
+                    )
                     .where(inArray(timeEntries.id, ids));
 
                 return findEntriesByIds(ids);

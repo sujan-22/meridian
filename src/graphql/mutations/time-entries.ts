@@ -12,6 +12,15 @@ import type { TimeEntryModel } from "../types/time-entry";
 
 type BillingType = (typeof timeEntries.$inferSelect)["billingType"];
 
+/** A percentage outside 0-100 is a client bug, not something to persist. */
+function clampPercent(value: number | null | undefined): number {
+    if (value == null) {
+        return 0;
+    }
+
+    return Math.min(100, Math.max(0, Math.round(value)));
+}
+
 function durationBetween(startedAt: Date, endedAt: Date): number {
     const seconds = Math.round((endedAt.getTime() - startedAt.getTime()) / 1000);
 
@@ -92,6 +101,7 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
             ticketNumber: t.string(),
             billingType: t.field({ type: refs.BillingType }),
             kind: t.field({ type: refs.EntryKind }),
+            unbillablePercent: t.int(),
             startedAt: t.field({ type: "DateTime" }),
         }),
     });
@@ -103,6 +113,7 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
             ticketNumber: t.string(),
             billingType: t.field({ type: refs.BillingType }),
             kind: t.field({ type: refs.EntryKind }),
+            unbillablePercent: t.int(),
             startedAt: t.field({ type: "DateTime", required: true }),
             endedAt: t.field({ type: "DateTime", required: true }),
         }),
@@ -115,6 +126,7 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
             ticketNumber: t.string(),
             billingType: t.field({ type: refs.BillingType }),
             kind: t.field({ type: refs.EntryKind }),
+            unbillablePercent: t.int(),
             startedAt: t.field({ type: "DateTime" }),
             endedAt: t.field({ type: "DateTime" }),
         }),
@@ -146,6 +158,7 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                         ticketNumber: input.ticketNumber?.trim() || null,
                         billingType,
                         kind: input.kind ?? "work",
+                        unbillablePercent: clampPercent(input.unbillablePercent),
                         startedAt,
                         endedAt: null,
                         durationSeconds: null,
@@ -209,6 +222,7 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                         ticketNumber: input.ticketNumber?.trim() || null,
                         billingType,
                         kind: input.kind ?? "work",
+                        unbillablePercent: clampPercent(input.unbillablePercent),
                         startedAt: input.startedAt,
                         endedAt: input.endedAt,
                         ...durationFields(input.startedAt, input.endedAt),
@@ -259,6 +273,12 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                         }),
 
                         ...(input.kind != null && { kind: input.kind }),
+
+                        ...(input.unbillablePercent != null && {
+                            unbillablePercent: clampPercent(
+                                input.unbillablePercent,
+                            ),
+                        }),
 
                         startedAt,
                         endedAt,
