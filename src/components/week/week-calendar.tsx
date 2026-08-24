@@ -14,6 +14,7 @@ import {
     type DragPreview,
     type EntryPlacement,
 } from "@/components/week/use-entry-drag";
+import { BillableSplit } from "@/components/timer/billable-split";
 import { EntryHoverCard } from "@/components/timer/entry-hover-card";
 import type { TimeEntryFieldsFragment } from "@/gql/graphql";
 import { layoutDay, type LayoutInput } from "@/lib/calendar-layout";
@@ -661,7 +662,11 @@ function EntryBlock({
 
                     {!compact && (
                         <span className="mt-0.5 block truncate text-[0.625rem] leading-tight text-foreground/60">
-                            {formatMinutesAsHours(entryBilledMinutes(entry))} h
+                            <BillableSplit
+                                billableMinutes={entry.billableMinutes}
+                                unbillableMinutes={entry.unbillableMinutes}
+                                compact
+                            />
                             {" · "}
                             {entry.project.name}
                         </span>

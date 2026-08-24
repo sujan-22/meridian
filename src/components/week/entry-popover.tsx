@@ -6,7 +6,7 @@ import { Copy, Pencil, Play, Trash2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { TimeEntryFieldsFragment } from "@/gql/graphql";
 import { formatTimeOfDay } from "@/lib/dates";
-import { entryBilledMinutes, formatMinutesAsHours } from "@/lib/duration";
+import { BillableSplit } from "@/components/timer/billable-split";
 import { projectColor } from "@/lib/project-color";
 
 export interface PopoverAnchor {
@@ -110,9 +110,11 @@ export function EntryPopover({
                         {entry.endedAt
                             ? formatTimeOfDay(entry.endedAt)
                             : "now"}
-                        <span className="ml-2 text-foreground">
-                            {formatMinutesAsHours(entryBilledMinutes(entry))} h
-                        </span>
+                        <BillableSplit
+                            billableMinutes={entry.billableMinutes}
+                            unbillableMinutes={entry.unbillableMinutes}
+                            className="ml-2 text-foreground"
+                        />
                     </p>
                 </div>
             </div>

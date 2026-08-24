@@ -23,6 +23,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { BillableSplit } from "@/components/timer/billable-split";
 import { EntryHoverCard } from "@/components/timer/entry-hover-card";
 import { LiveClock } from "@/components/timer/live-clock";
 import type { TimeEntryFieldsFragment } from "@/gql/graphql";
@@ -211,14 +212,18 @@ function EntryRow({
 
                 <span
                     className={cn(
-                        "w-14 text-right font-mono text-sm font-medium tabular-nums",
-                        entry.isRunning && "text-primary",
+                        "text-right font-mono text-sm font-medium tabular-nums",
+                        entry.isRunning ? "w-14 text-primary" : "min-w-14",
                     )}
                 >
                     {entry.isRunning ? (
                         <LiveClock startedAt={entry.startedAt} asBilledHours />
                     ) : (
-                        formatMinutesAsHours(entryBilledMinutes(entry))
+                        <BillableSplit
+                            billableMinutes={entry.billableMinutes}
+                            unbillableMinutes={entry.unbillableMinutes}
+                            compact
+                        />
                     )}
                 </span>
 
