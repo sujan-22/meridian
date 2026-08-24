@@ -347,6 +347,7 @@ function RunningTimer({
                     <div className="grid flex-1 gap-3 sm:grid-cols-2 xl:flex xl:items-center">
                         <ProjectSelect
                             projects={projects}
+                            keepSelectable={entry.project}
                             value={entry.project.id}
                             onChange={(projectId) => {
                                 if (projectId && projectId !== entry.project.id) {

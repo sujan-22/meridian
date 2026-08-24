@@ -268,6 +268,7 @@ function EntryForm({
                     <Field label="Project">
                         <ProjectSelect
                             projects={projects}
+                            keepSelectable={entry?.project}
                             value={projectId}
                             onChange={setProjectId}
                         />
