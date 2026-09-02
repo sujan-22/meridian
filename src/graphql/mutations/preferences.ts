@@ -43,7 +43,7 @@ export function registerPreferencesMutations(
                 }),
             },
 
-            resolve: async (_parent, { input }) => {
+            resolve: async (_parent, { input }, ctx) => {
                 if (
                     input.weekStartsOn != null &&
                     (input.weekStartsOn < 0 || input.weekStartsOn > 6)
@@ -73,7 +73,7 @@ export function registerPreferencesMutations(
                     );
                 }
 
-                return savePreferences({
+                return savePreferences(ctx.userId, {
                     ...(input.weekStartsOn != null && {
                         weekStartsOn: input.weekStartsOn,
                     }),

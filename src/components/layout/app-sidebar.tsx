@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
+import { AccountMenu, type AccountUser } from "@/components/layout/account-menu";
 
 import {
     Sidebar,
@@ -87,7 +88,7 @@ const navigation = [
     },
 ];
 
-export function AppSidebar() {
+export function AppSidebar({ user }: { user: AccountUser }) {
     const pathname = usePathname();
 
     return (
@@ -147,6 +148,10 @@ export function AppSidebar() {
 
             <SidebarFooter className="border-t border-sidebar-border">
                 <SidebarMenu>
+                    <SidebarMenuItem>
+                        <AccountMenu user={user} />
+                    </SidebarMenuItem>
+
                     <SidebarMenuItem>
                         <SidebarMenuButton
                             render={<Link href="/settings" />}

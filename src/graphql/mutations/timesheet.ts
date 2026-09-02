@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { GraphQLError } from "graphql";
 
 import { db } from "@/db";
@@ -40,7 +40,7 @@ export function registerTimesheetMutations(builder: AppBuilder, refs: Refs) {
                 portion: t.arg({ type: EntryPortionRef }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 const ids = args.ids.map(String);
 
                 if (ids.length === 0) {
@@ -56,9 +56,14 @@ export function registerTimesheetMutations(builder: AppBuilder, refs: Refs) {
                             ? { nonBillableEnteredAt: at }
                             : { timesheetEnteredAt: at },
                     )
-                    .where(inArray(timeEntries.id, ids));
+                    .where(
+                        and(
+                            eq(timeEntries.userId, ctx.userId),
+                            inArray(timeEntries.id, ids),
+                        ),
+                    );
 
-                return findEntriesByIds(ids);
+                return findEntriesByIds(ctx.userId, ids);
             },
         }),
 
@@ -70,16 +75,17 @@ export function registerTimesheetMutations(builder: AppBuilder, refs: Refs) {
                 weekEnd: t.arg({ type: "Date", required: true }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 if (args.weekEnd < args.weekStart) {
                     throw new GraphQLError(
                         "A week cannot end before it starts",
                     );
                 }
 
-                const preferences = await findPreferences();
+                const preferences = await findPreferences(ctx.userId);
 
                 const row = await upsertTimesheetWeek(
+                    ctx.userId,
                     args.weekStart,
                     args.weekEnd,
                     {
@@ -106,14 +112,17 @@ export function registerTimesheetMutations(builder: AppBuilder, refs: Refs) {
                 weekEnd: t.arg({ type: "Date", required: true }),
             },
 
-            resolve: async (_parent, args) => {
-                const preferences = await findPreferences();
+            resolve: async (_parent, args, ctx) => {
+                const preferences = await findPreferences(ctx.userId);
 
-                await upsertTimesheetWeek(args.weekStart, args.weekEnd, {
-                    completedAt: null,
-                });
+                await upsertTimesheetWeek(
+                    ctx.userId,
+                    args.weekStart,
+                    args.weekEnd,
+                    { completedAt: null },
+                );
 
-                const row = await findTimesheetWeek(args.weekStart);
+                const row = await findTimesheetWeek(ctx.userId, args.weekStart);
 
                 return toTimesheetWeekModel(
                     args.weekStart,

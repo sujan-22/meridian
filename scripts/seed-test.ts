@@ -10,7 +10,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import { sql } from "drizzle-orm";
 
-import { clients, projects, timeEntries } from "../src/db/schema";
+import { clients, projects, timeEntries, users } from "../src/db/schema";
 
 config({ path: ".env.test" });
 config({ path: ".env.local" });
@@ -54,20 +54,35 @@ const QUARTER = 15;
 async function seed() {
     await db.execute(sql`
         truncate table ${timeEntries}, ${projects}, ${clients},
-                      ticket_estimates, timesheet_weeks, preferences
+                      ticket_estimates, timesheet_weeks, preferences,
+                      "user", session, account, verification
         restart identity cascade
     `);
+
+    // Everything is owned; the fixtures need an account to hang off.
+    const [owner] = await db
+        .insert(users)
+        .values({
+            id: "test-user-quanta",
+            name: "Test User",
+            email: "test@quanta.local",
+            emailVerified: true,
+        })
+        .returning();
+
+    const userId = owner.id;
 
     const [gardner, millcraft, evenica] = await db
         .insert(clients)
         .values([
-            { name: "Gardner Inc.", shortName: "Gardner", color: "#6574cd" },
+            { userId, name: "Gardner Inc.", shortName: "Gardner", color: "#6574cd" },
             {
+                userId,
                 name: "The MillCraft Paper Company, Inc.",
                 shortName: "Millcraft",
                 color: "#d84a4a",
             },
-            { name: "Evenica Corp.", shortName: "Evenica", color: "#d88c34" },
+            { userId, name: "Evenica Corp.", shortName: "Evenica", color: "#d88c34" },
         ])
         .returning();
 
@@ -75,6 +90,7 @@ async function seed() {
         .insert(projects)
         .values([
             {
+                userId,
                 clientId: gardner.id,
                 name: "Gardner - Ongoing Support",
                 color: "#6574cd",
@@ -82,6 +98,7 @@ async function seed() {
                 polarisTask: "1500 - Ongoing Support",
             },
             {
+                userId,
                 clientId: millcraft.id,
                 name: "Millcraft - Ongoing Support",
                 color: "#d84a4a",
@@ -89,6 +106,7 @@ async function seed() {
                 polarisTask: "1500 - Ongoing Support",
             },
             {
+                userId,
                 clientId: evenica.id,
                 name: "CC - Meetings",
                 color: "#31b5a4",
@@ -98,6 +116,7 @@ async function seed() {
             // Archived on purpose: the suites check it stays off the pickers
             // but remains selectable on the entry that already uses it.
             {
+                userId,
                 clientId: gardner.id,
                 name: "Gardner - Retired Stream",
                 color: "#9b6bd6",
@@ -184,6 +203,7 @@ async function seed() {
 
     await db.insert(timeEntries).values(
         rows.map((row) => ({
+            userId,
             projectId: row.projectId,
             description: row.description,
             ticketNumber: row.ticketNumber,

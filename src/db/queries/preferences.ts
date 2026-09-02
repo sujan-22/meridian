@@ -1,16 +1,16 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { preferences, PREFERENCES_ID } from "@/db/schema";
+import { preferences } from "@/db/schema";
 
 export type PreferencesRow = typeof preferences.$inferSelect;
 
-/** The single preferences row, created with column defaults on first read. */
-export async function findPreferences(): Promise<PreferencesRow> {
+/** A person's preferences, created with column defaults on first read. */
+export async function findPreferences(userId: string): Promise<PreferencesRow> {
     const existing = await db
         .select()
         .from(preferences)
-        .where(eq(preferences.id, PREFERENCES_ID))
+        .where(eq(preferences.userId, userId))
         .limit(1);
 
     if (existing[0]) {
@@ -19,7 +19,7 @@ export async function findPreferences(): Promise<PreferencesRow> {
 
     const [created] = await db
         .insert(preferences)
-        .values({ id: PREFERENCES_ID })
+        .values({ userId })
         .onConflictDoNothing()
         .returning();
 
@@ -31,21 +31,24 @@ export async function findPreferences(): Promise<PreferencesRow> {
     const [row] = await db
         .select()
         .from(preferences)
-        .where(eq(preferences.id, PREFERENCES_ID))
+        .where(eq(preferences.userId, userId))
         .limit(1);
 
     return row;
 }
 
 export async function savePreferences(
-    patch: Partial<Omit<PreferencesRow, "id" | "createdAt" | "updatedAt">>,
+    userId: string,
+    patch: Partial<
+        Omit<PreferencesRow, "id" | "userId" | "createdAt" | "updatedAt">
+    >,
 ): Promise<PreferencesRow> {
-    await findPreferences();
+    await findPreferences(userId);
 
     const [updated] = await db
         .update(preferences)
         .set(patch)
-        .where(eq(preferences.id, PREFERENCES_ID))
+        .where(eq(preferences.userId, userId))
         .returning();
 
     return updated;

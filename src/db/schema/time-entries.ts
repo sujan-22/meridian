@@ -8,6 +8,7 @@ import {
     varchar,
 } from "drizzle-orm/pg-core";
 
+import { users } from "./auth";
 import { billingTypeEnum, entryKindEnum } from "./enums";
 import { projects } from "./projects";
 
@@ -15,6 +16,11 @@ export const timeEntries = pgTable(
     "time_entries",
     {
         id: uuid("id").defaultRandom().primaryKey(),
+
+        /** Every row belongs to exactly one person; nothing is shared. */
+        userId: text("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
 
         projectId: uuid("project_id")
             .notNull()
@@ -78,7 +84,10 @@ export const timeEntries = pgTable(
             .$onUpdate(() => new Date()),
     },
     (table) => [
-        index("time_entries_started_at_idx").on(table.startedAt),
+        index("time_entries_user_started_at_idx").on(
+            table.userId,
+            table.startedAt,
+        ),
 
         index("time_entries_project_started_at_idx").on(
             table.projectId,

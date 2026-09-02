@@ -7,6 +7,7 @@ import {
     uuid,
 } from "drizzle-orm/pg-core";
 
+import { users } from "./auth";
 import { clients } from "./clients";
 import { billingTypeEnum } from "./enums";
 
@@ -14,6 +15,11 @@ export const projects = pgTable(
     "projects",
     {
         id: uuid("id").defaultRandom().primaryKey(),
+
+        /** Every row belongs to exactly one person; nothing is shared. */
+        userId: text("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
 
         clientId: uuid("client_id")
             .notNull()

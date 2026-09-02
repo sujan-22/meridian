@@ -13,6 +13,13 @@ import { GraphQLError } from "graphql";
  */
 export function createBuilder() {
     const builder = new SchemaBuilder<{
+        /**
+         * Every resolver runs on behalf of exactly one signed-in person.
+         * There is no unauthenticated path to the schema - the route handler
+         * rejects the request before it reaches here.
+         */
+        Context: { userId: string };
+
         // Fields are non-null unless they opt in with `nullable: true`, so the
         // generated client types stop being `string | null` everywhere.
         DefaultFieldNullability: false;

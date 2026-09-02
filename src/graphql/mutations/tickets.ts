@@ -23,8 +23,12 @@ export function registerTicketMutations(builder: AppBuilder, refs: Refs) {
         },
     );
 
-    async function reload(projectId: string, ticketNumber: string) {
-        const summaries = await findTicketSummaries();
+    async function reload(
+        userId: string,
+        projectId: string,
+        ticketNumber: string,
+    ) {
+        const summaries = await findTicketSummaries(userId);
 
         const summary = summaries.find(
             (candidate) =>
@@ -52,7 +56,7 @@ export function registerTicketMutations(builder: AppBuilder, refs: Refs) {
                 }),
             },
 
-            resolve: async (_parent, { input }) => {
+            resolve: async (_parent, { input }, ctx) => {
                 const ticketNumber = input.ticketNumber.trim();
                 const projectId = String(input.projectId);
 
@@ -76,6 +80,7 @@ export function registerTicketMutations(builder: AppBuilder, refs: Refs) {
                 }
 
                 await upsertTicketEstimate({
+                    userId: ctx.userId,
                     projectId,
                     ticketNumber,
                     minMinutes: input.minMinutes ?? null,
@@ -83,7 +88,7 @@ export function registerTicketMutations(builder: AppBuilder, refs: Refs) {
                     notes: input.notes?.trim() || null,
                 });
 
-                return reload(projectId, ticketNumber);
+                return reload(ctx.userId, projectId, ticketNumber);
             },
         }),
 
@@ -95,13 +100,17 @@ export function registerTicketMutations(builder: AppBuilder, refs: Refs) {
                 ticketNumber: t.arg.string({ required: true }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 const projectId = String(args.projectId);
                 const ticketNumber = args.ticketNumber.trim();
 
-                await deleteTicketEstimate(projectId, ticketNumber);
+                await deleteTicketEstimate(
+                    ctx.userId,
+                    projectId,
+                    ticketNumber,
+                );
 
-                return reload(projectId, ticketNumber);
+                return reload(ctx.userId, projectId, ticketNumber);
             },
         }),
     }));
