@@ -61,7 +61,9 @@ export function WeekView() {
     };
 
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [editing, setEditing] = useState<TimeEntryFieldsFragment | null>(null);
+    const [editing, setEditing] = useState<TimeEntryFieldsFragment | null>(
+        null,
+    );
     const [dialogDay, setDialogDay] = useState<Date | null>(null);
     const [prefill, setPrefill] = useState<Partial<EntryDraft> | null>(null);
 
@@ -176,8 +178,8 @@ export function WeekView() {
     }
 
     return (
-        <div className="flex w-full flex-1 flex-col px-5 py-6 lg:px-8 2xl:px-10">
-            <header className="mb-5 flex flex-wrap items-end justify-between gap-4">
+        <div className="flex w-full flex-1 flex-col px-5 py-4 lg:px-8 2xl:px-10">
+            <header className="mb-3 flex flex-wrap items-end justify-between gap-4">
                 <div className="min-w-0">
                     <h2 className="text-xl font-semibold tracking-tight">
                         {anchor ? `Week ${getISOWeek(anchor)}` : "Week"}
@@ -265,9 +267,9 @@ export function WeekView() {
                 </div>
             </header>
 
-            <div className="mb-5">
+            <div className="mb-2">
                 {days.length === 0 ? (
-                    <Skeleton className="h-16 w-full rounded-lg" />
+                    <Skeleton className="h-8 w-full rounded-lg" />
                 ) : (
                     <WeekSummary
                         days={tallies}

@@ -38,7 +38,8 @@ export const ZOOM_LEVELS = [
 
 export const DEFAULT_ZOOM = 1;
 
-const AXIS_WIDTH = "3.25rem";
+/** Width of the time axis. The summary strip above lines up against it. */
+export const AXIS_WIDTH = "3.25rem";
 const MINUTES_PER_DAY = 24 * 60;
 const POPOVER_WIDTH = 288;
 

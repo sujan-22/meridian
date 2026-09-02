@@ -139,6 +139,24 @@ function EntryForm({ projects, day, entry, initial, onDone }: EntryFormProps) {
     const [error, setError] = useState<string | null>(null);
     const [suggestionsOpen, setSuggestionsOpen] = useState(false);
 
+    /**
+     * Which fields the user has set themselves.
+     *
+     * Anything not pinned keeps following the description as it is typed.
+     * Without this, "Gardner 12422" captured the ticket as "12" the moment
+     * the second digit landed and then refused every later correction,
+     * because a filled-in value is indistinguishable from a chosen one.
+     */
+    const [pinned, setPinned] = useState({
+        project: Boolean(entry?.project.id ?? initial?.projectId),
+        ticket: Boolean(entry?.ticketNumber ?? initial?.ticketNumber),
+        kind: Boolean(entry?.kind ?? initial?.kind),
+    });
+
+    function pin(field: "project" | "ticket" | "kind") {
+        setPinned((current) => ({ ...current, [field]: true }));
+    }
+
     const { createEntry, updateEntry, pending } = useEntryActions();
 
     const range = resolveRange(day, startTime, endTime);
@@ -155,8 +173,8 @@ function EntryForm({ projects, day, entry, initial, onDone }: EntryFormProps) {
         null;
 
     /**
-     * Fill in whatever the description reveals without ever clobbering a
-     * value the user has already set by hand.
+     * Re-reads the description on every keystroke, and applies whatever it
+     * finds to the fields the user has not taken over.
      */
     function handleDescriptionChange(next: string) {
         setDescription(next);
@@ -164,19 +182,18 @@ function EntryForm({ projects, day, entry, initial, onDone }: EntryFormProps) {
 
         const detected = parseEntryDescription(next, projects);
 
-        if (!projectId && detected.projectId) {
+        if (!pinned.project && detected.projectId) {
             setProjectId(detected.projectId);
         }
 
-        if (!ticketNumber && detected.ticketNumber) {
-            setTicketNumber(detected.ticketNumber);
-            setKind("WORK");
-
-            return;
+        if (!pinned.ticket) {
+            // Cleared as readily as it is filled: deleting the number from
+            // the description should empty the field, not leave it stale.
+            setTicketNumber(detected.ticketNumber ?? "");
         }
 
-        if (!ticketNumber && detected.kind === "MEETING") {
-            setKind("MEETING");
+        if (!pinned.kind) {
+            setKind(detected.kind);
         }
     }
 
@@ -265,13 +282,25 @@ function EntryForm({ projects, day, entry, initial, onDone }: EntryFormProps) {
                                 setProjectId(picked.project.id);
                                 setTicketNumber(picked.ticketNumber ?? "");
                                 setKind(picked.kind);
+
+                                setPinned({
+                                    project: true,
+                                    ticket: true,
+                                    kind: true,
+                                });
                             }}
                         />
                     </div>
                 </Field>
 
                 <div className="flex items-center justify-between gap-4">
-                    <KindToggle value={kind} onChange={setKind} />
+                    <KindToggle
+                        value={kind}
+                        onChange={(next) => {
+                            pin("kind");
+                            setKind(next);
+                        }}
+                    />
 
                     <p className="text-xs text-muted-foreground">
                         {kind === "MEETING"
@@ -286,16 +315,21 @@ function EntryForm({ projects, day, entry, initial, onDone }: EntryFormProps) {
                             projects={projects}
                             keepSelectable={entry?.project}
                             value={projectId}
-                            onChange={setProjectId}
+                            onChange={(next) => {
+                                pin("project");
+                                setProjectId(next);
+                            }}
                         />
                     </Field>
 
                     <Field label="Ticket #">
                         <Input
                             value={ticketNumber}
-                            onChange={(event) =>
-                                setTicketNumber(event.target.value)
-                            }
+                            onChange={(event) => {
+                                pin("ticket");
+                                setTicketNumber(event.target.value);
+                            }}
+                            aria-label="Ticket number"
                             placeholder={
                                 kind === "MEETING" ? "Not applicable" : "14214"
                             }
