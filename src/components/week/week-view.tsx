@@ -25,6 +25,7 @@ import { toast } from "@/components/ui/toast";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { EntryDialog, type EntryDraft } from "@/components/timer/entry-dialog";
 import { useEntryActions } from "@/components/timer/use-entry-actions";
+import { CalendarReconnect } from "@/components/week/calendar-reconnect";
 import { WeekCalendar, ZOOM_LEVELS } from "@/components/week/week-calendar";
 import { useToday } from "@/hooks/use-clock";
 import { usePreferences } from "@/hooks/use-preferences";
@@ -154,12 +155,23 @@ export function WeekView() {
                 from: range.from.toISOString(),
                 to: range.to.toISOString(),
             },
-        }).catch(() => {
-            // A calendar that will not load must not break the week; the
-            // lane simply stays empty and Settings explains why.
-            syncedRanges.current.delete(key);
-        });
-    }, [range, connected, syncCalendar]);
+        })
+            .then((result) => {
+                // The sync reports an expired grant rather than throwing, so the
+                // status query is what the banner reads; refresh it.
+                if (result.data?.syncCalendar.needsReconnect) {
+                    void calendarStatus.refetch();
+                }
+            })
+            .catch(() => {
+                // A calendar that will not load must not break the week; the
+                // lane simply stays empty and Settings explains why.
+                syncedRanges.current.delete(key);
+            });
+    }, [range, connected, syncCalendar, calendarStatus]);
+
+    const needsReconnect =
+        calendarStatus.data?.calendarStatus.needsReconnect ?? false;
 
     const eventsByDay = new Map<string, CalendarEventFieldsFragment[]>();
 
@@ -345,6 +357,8 @@ export function WeekView() {
                     />
                 </div>
             </header>
+
+            {needsReconnect && <CalendarReconnect />}
 
             {entriesQuery.loading && entries.length === 0 ? (
                 <Skeleton className="h-96 w-full rounded-xl" />

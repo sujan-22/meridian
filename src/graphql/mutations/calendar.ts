@@ -3,6 +3,7 @@ import { GraphQLError } from "graphql";
 import {
     autoPromoteFinished,
     dismissCalendarEvent,
+    markReauthRequired,
     promoteCalendarEvent,
     syncCalendarWindow,
     touchCalendarConnection,
@@ -42,6 +43,23 @@ export function registerCalendarMutations(builder: AppBuilder, refs: Refs) {
                 try {
                     token = await googleAccessToken(ctx.userId);
                 } catch (error) {
+                    // An expired grant is an ordinary state for an app in
+                    // testing, not a failure to shout about: report it as
+                    // something the week can render and act on.
+                    if (
+                        error instanceof CalendarAccessError &&
+                        error.reason === "expired"
+                    ) {
+                        await markReauthRequired(ctx.userId);
+
+                        return {
+                            stored: 0,
+                            removed: 0,
+                            autoPromoted: 0,
+                            needsReconnect: true,
+                        };
+                    }
+
                     throw new GraphQLError(
                         error instanceof CalendarAccessError
                             ? error.message
@@ -58,6 +76,22 @@ export function registerCalendarMutations(builder: AppBuilder, refs: Refs) {
                         args.to,
                     );
                 } catch (error) {
+                    // Google answers 401 on a token it has decided to stop
+                    // honouring, which is the same situation by another route.
+                    if (
+                        error instanceof GoogleCalendarError &&
+                        error.status === 401
+                    ) {
+                        await markReauthRequired(ctx.userId);
+
+                        return {
+                            stored: 0,
+                            removed: 0,
+                            autoPromoted: 0,
+                            needsReconnect: true,
+                        };
+                    }
+
                     throw new GraphQLError(
                         error instanceof GoogleCalendarError
                             ? error.message
@@ -81,7 +115,7 @@ export function registerCalendarMutations(builder: AppBuilder, refs: Refs) {
                     new Date(),
                 );
 
-                return { stored, removed, autoPromoted };
+                return { stored, removed, autoPromoted, needsReconnect: false };
             },
         }),
 
@@ -155,6 +189,7 @@ export function registerCalendarMutations(builder: AppBuilder, refs: Refs) {
                     autoPromote: connection.autoPromote,
                     defaultProjectId: connection.defaultProjectId,
                     hasCalendarScope: await hasCalendarScope(ctx.userId),
+                    needsReconnect: connection.reauthRequiredAt != null,
                 };
             },
         }),

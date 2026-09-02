@@ -35,7 +35,11 @@ export async function findCalendarConnection(
     return rows[0] ?? null;
 }
 
-/** Records the connection on first sync, and stamps every one after that. */
+/**
+ * Records the connection on first sync, and stamps every one after that. A
+ * sync that got as far as calling this one worked, so it also clears any
+ * standing "needs reconnecting" flag.
+ */
 export async function touchCalendarConnection(
     userId: string,
     patch: { defaultProjectId?: string | null; autoPromote?: boolean } = {},
@@ -45,11 +49,29 @@ export async function touchCalendarConnection(
         .values({ userId, lastSyncedAt: new Date(), ...patch })
         .onConflictDoUpdate({
             target: calendarConnections.userId,
-            set: { lastSyncedAt: new Date(), ...patch },
+            set: {
+                lastSyncedAt: new Date(),
+                reauthRequiredAt: null,
+                ...patch,
+            },
         })
         .returning();
 
     return row;
+}
+
+/**
+ * Remembers that Google stopped renewing access, so the week can say so on
+ * the next load without another round trip to find out.
+ */
+export async function markReauthRequired(userId: string): Promise<void> {
+    await db
+        .insert(calendarConnections)
+        .values({ userId, reauthRequiredAt: new Date() })
+        .onConflictDoUpdate({
+            target: calendarConnections.userId,
+            set: { reauthRequiredAt: new Date() },
+        });
 }
 
 export async function findCalendarEvents(

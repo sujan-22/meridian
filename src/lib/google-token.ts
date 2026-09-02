@@ -33,7 +33,22 @@ export async function hasCalendarScope(userId: string): Promise<boolean> {
     return (account?.scope ?? "").includes(CALENDAR_SCOPE);
 }
 
-export class CalendarAccessError extends Error {}
+/**
+ * Why the calendar cannot be read. The distinction matters: a missing scope
+ * is a one-off setup step, while an expired grant is the recurring cost of
+ * an app that Google still considers to be in testing.
+ */
+export type CalendarAccessReason = "unlinked" | "no-scope" | "expired";
+
+export class CalendarAccessError extends Error {
+    constructor(
+        message: string,
+        readonly reason: CalendarAccessReason,
+    ) {
+        super(message);
+        this.name = "CalendarAccessError";
+    }
+}
 
 /**
  * A currently-valid Google access token, refreshed if it has expired.
@@ -46,12 +61,16 @@ export async function googleAccessToken(userId: string): Promise<string> {
     const account = await googleAccount(userId);
 
     if (!account) {
-        throw new CalendarAccessError("This account is not linked to Google.");
+        throw new CalendarAccessError(
+            "This account is not linked to Google.",
+            "unlinked",
+        );
     }
 
     if (!(account.scope ?? "").includes(CALENDAR_SCOPE)) {
         throw new CalendarAccessError(
-            "Calendar access was never granted. Sign out and back in to allow it.",
+            "Calendar access was never granted. Sign in again to allow it.",
+            "no-scope",
         );
     }
 
@@ -62,8 +81,12 @@ export async function googleAccessToken(userId: string): Promise<string> {
 
         return accessToken;
     } catch {
+        // Google refused to mint a new token from the refresh token. For an
+        // app in Testing that is routine rather than exceptional - those
+        // refresh tokens are only good for seven days.
         throw new CalendarAccessError(
-            "Google would not renew the calendar access. Sign out and back in.",
+            "Google would not renew the calendar access. Signing in again restores it.",
+            "expired",
         );
     }
 }

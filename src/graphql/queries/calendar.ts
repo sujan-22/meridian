@@ -40,6 +40,7 @@ export function registerCalendarQueries(builder: AppBuilder, refs: Refs) {
                     autoPromote: connection?.autoPromote ?? true,
                     defaultProjectId: connection?.defaultProjectId ?? null,
                     hasCalendarScope: await hasCalendarScope(ctx.userId),
+                    needsReconnect: connection?.reauthRequiredAt != null,
                 };
             },
         }),

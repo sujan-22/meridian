@@ -104,4 +104,12 @@ export const calendarConnections = pgTable("calendar_connections", {
 
     /** Meetings finish, then become entries by themselves. Off by default. */
     autoPromote: boolean("auto_promote").default(true).notNull(),
+
+    /**
+     * Set when Google stops renewing access, which for an app in Testing
+     * happens on a schedule: refresh tokens issued to it expire after seven
+     * days. Recorded rather than rediscovered, so the week can say so without
+     * asking Google on every page load.
+     */
+    reauthRequiredAt: timestamp("reauth_required_at", { withTimezone: true }),
 });

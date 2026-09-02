@@ -78,6 +78,13 @@
       "when": 1788376314228,
       "tag": "0010_eminent_weapon_omega",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788378484837,
+      "tag": "0011_polite_sunspot",
+      "breakpoints": true
     }
   ]
 }

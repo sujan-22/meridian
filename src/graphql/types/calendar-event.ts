@@ -34,6 +34,8 @@ export interface CalendarStatusModel {
     defaultProjectId: string | null;
     /** False when the Google grant does not cover the calendar. */
     hasCalendarScope: boolean;
+    /** The grant covered it once, and Google has since stopped renewing. */
+    needsReconnect: boolean;
 }
 
 export function calendarStatusRef(builder: AppBuilder) {
@@ -42,6 +44,7 @@ export function calendarStatusRef(builder: AppBuilder) {
             connected: t.exposeBoolean("connected"),
             autoPromote: t.exposeBoolean("autoPromote"),
             hasCalendarScope: t.exposeBoolean("hasCalendarScope"),
+            needsReconnect: t.exposeBoolean("needsReconnect"),
 
             defaultProjectId: t.exposeID("defaultProjectId", {
                 nullable: true,
@@ -60,6 +63,8 @@ export interface CalendarSyncResultModel {
     stored: number;
     removed: number;
     autoPromoted: number;
+    /** Google stopped renewing access; nothing was read. */
+    needsReconnect: boolean;
 }
 
 export function calendarSyncResultRef(builder: AppBuilder) {
@@ -70,6 +75,7 @@ export function calendarSyncResultRef(builder: AppBuilder) {
                 stored: t.exposeInt("stored"),
                 removed: t.exposeInt("removed"),
                 autoPromoted: t.exposeInt("autoPromoted"),
+                needsReconnect: t.exposeBoolean("needsReconnect"),
             }),
         });
 }

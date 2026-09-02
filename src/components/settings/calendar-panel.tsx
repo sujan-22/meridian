@@ -71,6 +71,29 @@ export function CalendarPanel() {
 
             {loading ? (
                 <p className="text-sm text-muted-foreground">Checking…</p>
+            ) : status?.needsReconnect ? (
+                <div className="flex flex-col items-start gap-3">
+                    <p className="flex items-start gap-1.5 text-xs text-amber-400">
+                        <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+
+                        <span>
+                            Google stopped renewing calendar access. It expires
+                            access every seven days while the OAuth app is in
+                            testing, so this will come round again — signing in
+                            restores it each time.
+                        </span>
+                    </p>
+
+                    <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={reconnecting}
+                        onClick={reconnect}
+                    >
+                        {reconnecting ? "Signing out…" : "Reconnect"}
+                    </Button>
+                </div>
             ) : status?.hasCalendarScope ? (
                 <div className="flex flex-col gap-4">
                     <p className="flex items-center gap-1.5 text-xs text-emerald-400">
