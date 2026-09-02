@@ -1,5 +1,6 @@
 import {
     boolean,
+    index,
     pgTable,
     text,
     timestamp,
@@ -11,27 +12,35 @@ import {
  * drizzle-kit stays the single migration system - `vercel-build` runs one
  * migrate step and the whole schema is covered.
  *
- * Shapes follow better-auth's core schema; only add columns it knows about.
+ * The shapes are not guesswork: they are what `getAuthTables()` reports for
+ * the installed version with this exact config. Check that again after any
+ * better-auth upgrade - 1.7 added `account.issuer`, and a missing column
+ * shows up as a syntax error in a generated query rather than a clear one.
  */
-export const users = pgTable("user", {
-    id: text("id").primaryKey(),
+export const users = pgTable(
+    "user",
+    {
+        id: text("id").primaryKey(),
 
-    name: text("name").notNull(),
+        name: text("name").notNull(),
 
-    email: text("email").notNull(),
+        email: text("email").notNull(),
 
-    emailVerified: boolean("email_verified").default(false).notNull(),
+        emailVerified: boolean("email_verified").default(false).notNull(),
 
-    image: text("image"),
+        image: text("image"),
 
-    createdAt: timestamp("created_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
+        createdAt: timestamp("created_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
 
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-});
+        updatedAt: timestamp("updated_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    },
+    // Account linking matches on the address, so two rows may never hold it.
+    (table) => [uniqueIndex("user_email_unique").on(table.email)],
+);
 
 export const sessions = pgTable(
     "session",
@@ -57,55 +66,76 @@ export const sessions = pgTable(
             .defaultNow()
             .notNull(),
     },
-    (table) => [uniqueIndex("session_token_unique").on(table.token)],
+    (table) => [
+        uniqueIndex("session_token_unique").on(table.token),
+        index("session_user_idx").on(table.userId),
+    ],
 );
 
-export const accounts = pgTable("account", {
-    id: text("id").primaryKey(),
+export const accounts = pgTable(
+    "account",
+    {
+        id: text("id").primaryKey(),
 
-    accountId: text("account_id").notNull(),
-    providerId: text("provider_id").notNull(),
+        // Identity is scoped by issuer as of better-auth 1.7: the provider
+        // says who vouched for the account ("google"), the issuer says which
+        // service actually did ("https://accounts.google.com").
+        issuer: text("issuer").notNull(),
 
-    userId: text("user_id")
-        .notNull()
-        .references(() => users.id, { onDelete: "cascade" }),
+        accountId: text("account_id").notNull(),
+        providerId: text("provider_id").notNull(),
 
-    accessToken: text("access_token"),
-    refreshToken: text("refresh_token"),
-    idToken: text("id_token"),
+        userId: text("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
 
-    accessTokenExpiresAt: timestamp("access_token_expires_at", {
-        withTimezone: true,
-    }),
-    refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
-        withTimezone: true,
-    }),
+        accessToken: text("access_token"),
+        refreshToken: text("refresh_token"),
+        idToken: text("id_token"),
 
-    scope: text("scope"),
-    password: text("password"),
+        accessTokenExpiresAt: timestamp("access_token_expires_at", {
+            withTimezone: true,
+        }),
+        refreshTokenExpiresAt: timestamp("refresh_token_expires_at", {
+            withTimezone: true,
+        }),
 
-    createdAt: timestamp("created_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
+        scope: text("scope"),
+        password: text("password"),
 
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-});
+        createdAt: timestamp("created_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
 
-export const verifications = pgTable("verification", {
-    id: text("id").primaryKey(),
+        updatedAt: timestamp("updated_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    },
+    (table) => [
+        index("account_user_idx").on(table.userId),
+        // How a sign-in finds an existing account.
+        index("account_issuer_account_idx").on(table.issuer, table.accountId),
+    ],
+);
 
-    identifier: text("identifier").notNull(),
-    value: text("value").notNull(),
+export const verifications = pgTable(
+    "verification",
+    {
+        id: text("id").primaryKey(),
 
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+        identifier: text("identifier").notNull(),
+        value: text("value").notNull(),
 
-    createdAt: timestamp("created_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
+        expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-        .defaultNow()
-        .notNull(),
-});
+        createdAt: timestamp("created_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+
+        updatedAt: timestamp("updated_at", { withTimezone: true })
+            .defaultNow()
+            .notNull(),
+    },
+    // Every OAuth round trip looks a row up by identifier.
+    (table) => [index("verification_identifier_idx").on(table.identifier)],
+);

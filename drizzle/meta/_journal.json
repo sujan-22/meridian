@@ -57,6 +57,13 @@
       "when": 1788367228518,
       "tag": "0007_owned_by_someone",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788368441283,
+      "tag": "0008_red_living_tribunal",
+      "breakpoints": true
     }
   ]
 }
