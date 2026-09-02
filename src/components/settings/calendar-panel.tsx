@@ -186,9 +186,13 @@ export function CalendarPanel() {
                         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
 
                         <span>
-                            This account was signed in before calendar access
-                            was asked for. Signing in again grants it — nothing
-                            you have tracked is affected.
+                            Calendar access has not been granted for this
+                            account. Sign in again — and on Google&rsquo;s
+                            permissions step, <strong>tick the box</strong> for
+                            &ldquo;See and download any calendar you can access
+                            using your Google Calendar&rdquo;. Google leaves it
+                            unticked by default, and clicking Continue without
+                            it grants everything except the calendar.
                         </span>
                     </p>
 
