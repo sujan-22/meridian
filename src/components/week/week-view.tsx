@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@apollo/client/react";
 import {
     addWeeks,
     eachDayOfInterval,
     format,
     getISOWeek,
-    isSameDay,
     isSameMonth,
     isWeekend,
     startOfDay,
@@ -22,18 +21,24 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { EntryDialog, type EntryDraft } from "@/components/timer/entry-dialog";
 import { useEntryActions } from "@/components/timer/use-entry-actions";
 import { WeekCalendar, ZOOM_LEVELS } from "@/components/week/week-calendar";
-import { WeekSummary, type DayTally } from "@/components/week/week-summary";
 import { useToday } from "@/hooks/use-clock";
 import { usePreferences } from "@/hooks/use-preferences";
 import {
+    CalendarEventsDocument,
+    CalendarStatusDocument,
+    DismissCalendarEventDocument,
     EntriesDocument,
     PreferencesDocument,
     ProjectsDocument,
+    PromoteCalendarEventDocument,
+    SyncCalendarDocument,
     UpdatePreferencesDocument,
+    type CalendarEventFieldsFragment,
     type TimeEntryFieldsFragment,
 } from "@/gql/graphql";
 import { weekRange, type WeekStartsOn } from "@/lib/dates";
@@ -84,6 +89,86 @@ export function WeekView() {
 
     const { updateEntry, deleteEntry } = useEntryActions();
 
+    const calendarStatus = useQuery(CalendarStatusDocument);
+
+    const calendarQuery = useQuery(CalendarEventsDocument, {
+        variables: range
+            ? { from: range.from.toISOString(), to: range.to.toISOString() }
+            : { from: "", to: "" },
+        skip: !range,
+    });
+
+    const refetchCalendar = [
+        {
+            query: CalendarEventsDocument,
+            variables: range
+                ? { from: range.from.toISOString(), to: range.to.toISOString() }
+                : { from: "", to: "" },
+        },
+        {
+            query: EntriesDocument,
+            variables: range
+                ? { from: range.from.toISOString(), to: range.to.toISOString() }
+                : { from: "", to: "" },
+        },
+    ];
+
+    const [syncCalendar] = useMutation(SyncCalendarDocument, {
+        refetchQueries: refetchCalendar,
+        awaitRefetchQueries: true,
+    });
+
+    const [promoteEvent] = useMutation(PromoteCalendarEventDocument, {
+        refetchQueries: refetchCalendar,
+        awaitRefetchQueries: true,
+    });
+
+    const [dismissEvent] = useMutation(DismissCalendarEventDocument, {
+        refetchQueries: refetchCalendar,
+        awaitRefetchQueries: true,
+    });
+
+    /**
+     * There is no background worker, so opening a week is what makes its
+     * calendar current - and what gives finished meetings the chance to
+     * promote themselves. Synced once per week viewed, not on every render.
+     */
+    const syncedRanges = useRef(new Set<string>());
+    const connected = calendarStatus.data?.calendarStatus.hasCalendarScope;
+
+    useEffect(() => {
+        if (!range || !connected) {
+            return;
+        }
+
+        const key = range.from.toISOString();
+
+        if (syncedRanges.current.has(key)) {
+            return;
+        }
+
+        syncedRanges.current.add(key);
+
+        void syncCalendar({
+            variables: {
+                from: range.from.toISOString(),
+                to: range.to.toISOString(),
+            },
+        }).catch(() => {
+            // A calendar that will not load must not break the week; the
+            // lane simply stays empty and Settings explains why.
+            syncedRanges.current.delete(key);
+        });
+    }, [range, connected, syncCalendar]);
+
+    const eventsByDay = new Map<string, CalendarEventFieldsFragment[]>();
+
+    for (const event of calendarQuery.data?.calendarEvents ?? []) {
+        const key = new Date(event.startsAt).toDateString();
+
+        eventsByDay.set(key, [...(eventsByDay.get(key) ?? []), event]);
+    }
+
     const projects = projectsQuery.data?.projects ?? [];
     const entries = entriesQuery.data?.entries ?? [];
 
@@ -111,19 +196,13 @@ export function WeekView() {
 
     const dailyTarget = preferences.dailyTargetMinutes;
 
-    const tallies: DayTally[] = days.map((day) => ({
-        date: day,
-        billedMinutes: (entriesByDay.get(day.toDateString()) ?? []).reduce(
-            (total, entry) => total + entryBilledMinutes(entry),
-            0,
-        ),
-        targetMinutes: isWeekend(day) ? 0 : dailyTarget,
-        isFuture: today ? day > today : false,
-        isToday: today ? isSameDay(day, today) : false,
-    }));
-
-    const trackedMinutes = tallies.reduce(
-        (total, day) => total + day.billedMinutes,
+    const trackedMinutes = days.reduce(
+        (total, day) =>
+            total +
+            (entriesByDay.get(day.toDateString()) ?? []).reduce(
+                (dayTotal, entry) => dayTotal + entryBilledMinutes(entry),
+                0,
+            ),
         0,
     );
 
@@ -267,19 +346,6 @@ export function WeekView() {
                 </div>
             </header>
 
-            <div className="mb-2">
-                {days.length === 0 ? (
-                    <Skeleton className="h-8 w-full rounded-lg" />
-                ) : (
-                    <WeekSummary
-                        days={tallies}
-                        onSelectDay={(day) =>
-                            openSlot(day, preferences.dayStartHour * 60)
-                        }
-                    />
-                )}
-            </div>
-
             {entriesQuery.loading && entries.length === 0 ? (
                 <Skeleton className="h-96 w-full rounded-xl" />
             ) : (
@@ -287,6 +353,25 @@ export function WeekView() {
                 days.length > 0 && (
                     <WeekCalendar
                         days={days}
+                        dailyTargetMinutes={dailyTarget}
+                        eventsByDay={eventsByDay}
+                        onPromoteEvent={(event) => {
+                            void promoteEvent({
+                                variables: { id: event.id },
+                            }).catch((error: unknown) => {
+                                toast.add({
+                                    title: "Could not add that meeting",
+                                    description:
+                                        error instanceof Error
+                                            ? error.message
+                                            : undefined,
+                                    type: "error",
+                                });
+                            });
+                        }}
+                        onDismissEvent={(event) => {
+                            void dismissEvent({ variables: { id: event.id } });
+                        }}
                         entriesByDay={entriesByDay}
                         hourHeight={ZOOM_LEVELS[zoom].hourHeight}
                         tickMinutes={ZOOM_LEVELS[zoom].tickMinutes}

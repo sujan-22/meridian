@@ -1,6 +1,11 @@
 import type { AppBuilder } from "./builder";
 
 import { billingTypeRef } from "./types/billing-type";
+import {
+    calendarEventRef,
+    calendarStatusRef,
+    calendarSyncResultRef,
+} from "./types/calendar-event";
 import { clientRef } from "./types/client";
 import { entryKindRef } from "./types/entry-kind";
 import { preferencesRef } from "./types/preferences";
@@ -18,6 +23,9 @@ export function createRefs(builder: AppBuilder) {
     const BillingType = billingTypeRef(builder);
     const EntryKind = entryKindRef(builder);
     const Client = clientRef(builder);
+    const CalendarEvent = calendarEventRef(builder);
+    const CalendarStatus = calendarStatusRef(builder);
+    const CalendarSyncResult = calendarSyncResultRef(builder);
     const Preferences = preferencesRef(builder);
     const TimesheetWeek = timesheetWeekRef(builder);
 
@@ -35,6 +43,9 @@ export function createRefs(builder: AppBuilder) {
     return {
         BillingType,
         EntryKind,
+        CalendarEvent,
+        CalendarStatus,
+        CalendarSyncResult,
         Client,
         Preferences,
         Project,

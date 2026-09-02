@@ -3,6 +3,28 @@ enum BillingType {
   NON_BILLABLE
 }
 
+type CalendarEvent {
+  endsAt: DateTime!
+  id: ID!
+  isPromoted: Boolean!
+  startsAt: DateTime!
+  title: String!
+}
+
+type CalendarStatus {
+  autoPromote: Boolean!
+  connected: Boolean!
+  defaultProjectId: ID
+  hasCalendarScope: Boolean!
+  lastSyncedAt: DateTime
+}
+
+type CalendarSyncResult {
+  autoPromoted: Int!
+  removed: Int!
+  stored: Int!
+}
+
 type Client {
   archived: Boolean!
   color: String
@@ -83,12 +105,16 @@ type Mutation {
   createTimeEntry(input: CreateTimeEntryInput!): TimeEntry!
   deleteProject(id: ID!): Boolean!
   deleteTimeEntry(id: ID!): Boolean!
+  dismissCalendarEvent(id: ID!): Boolean!
   importTimeEntries(createMissingProjects: Boolean = true, rows: [ImportTimeEntryInput!]!): ImportResult!
   markTimeEntriesTransferred(ids: [ID!]!, portion: EntryPortion, transferred: Boolean!): [TimeEntry!]!
+  promoteCalendarEvent(id: ID!, projectId: ID): TimeEntry!
   reopenTimesheetWeek(weekEnd: Date!, weekStart: Date!): TimesheetWeek!
   setTicketEstimate(input: SetTicketEstimateInput!): TicketSummary!
   startTimer(input: StartTimerInput!): TimeEntry!
   stopTimer(endedAt: DateTime, id: ID!): TimeEntry!
+  syncCalendar(from: DateTime!, to: DateTime!): CalendarSyncResult!
+  updateCalendarSettings(autoPromote: Boolean, clearDefaultProject: Boolean, defaultProjectId: ID): CalendarStatus!
   updatePreferences(input: UpdatePreferencesInput!): Preferences!
   updateProject(id: ID!, input: UpdateProjectInput!): Project!
   updateTimeEntry(id: ID!, input: UpdateTimeEntryInput!): TimeEntry!
@@ -124,6 +150,8 @@ type ProjectSummary {
 
 type Query {
   activeTimer: TimeEntry
+  calendarEvents(from: DateTime!, to: DateTime!): [CalendarEvent!]!
+  calendarStatus: CalendarStatus!
   clients(includeArchived: Boolean = false): [Client!]!
   descriptionSuggestions(limit: Int = 5, query: String!): [TimeEntry!]!
   entries(from: DateTime!, to: DateTime!): [TimeEntry!]!

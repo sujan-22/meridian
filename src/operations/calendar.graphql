@@ -1,0 +1,59 @@
+fragment CalendarEventFields on CalendarEvent {
+    id
+    title
+    startsAt
+    endsAt
+    isPromoted
+}
+
+query CalendarEvents($from: DateTime!, $to: DateTime!) {
+    calendarEvents(from: $from, to: $to) {
+        ...CalendarEventFields
+    }
+}
+
+query CalendarStatus {
+    calendarStatus {
+        connected
+        lastSyncedAt
+        autoPromote
+        defaultProjectId
+        hasCalendarScope
+    }
+}
+
+mutation SyncCalendar($from: DateTime!, $to: DateTime!) {
+    syncCalendar(from: $from, to: $to) {
+        stored
+        removed
+        autoPromoted
+    }
+}
+
+mutation PromoteCalendarEvent($id: ID!, $projectId: ID) {
+    promoteCalendarEvent(id: $id, projectId: $projectId) {
+        ...TimeEntryFields
+    }
+}
+
+mutation DismissCalendarEvent($id: ID!) {
+    dismissCalendarEvent(id: $id)
+}
+
+mutation UpdateCalendarSettings(
+    $autoPromote: Boolean
+    $defaultProjectId: ID
+    $clearDefaultProject: Boolean
+) {
+    updateCalendarSettings(
+        autoPromote: $autoPromote
+        defaultProjectId: $defaultProjectId
+        clearDefaultProject: $clearDefaultProject
+    ) {
+        connected
+        lastSyncedAt
+        autoPromote
+        defaultProjectId
+        hasCalendarScope
+    }
+}
