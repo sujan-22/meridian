@@ -26,11 +26,11 @@ export const metadata: Metadata = {
         process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
     ),
 
-    applicationName: "Quanta",
+    applicationName: "Meridian",
 
     title: {
-        default: "Quanta",
-        template: "%s · Quanta",
+        default: "Meridian",
+        template: "%s · Meridian",
     },
 
     description: DESCRIPTION,
@@ -49,8 +49,8 @@ export const metadata: Metadata = {
 
     openGraph: {
         type: "website",
-        siteName: "Quanta",
-        title: "Quanta",
+        siteName: "Meridian",
+        title: "Meridian",
         description: DESCRIPTION,
     },
 

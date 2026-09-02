@@ -8,7 +8,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
  * code. The cookie stores an HMAC rather than the code itself: it cannot be
  * forged without the server secret, and the code never sits in a browser.
  */
-export const ACCESS_COOKIE = "quanta.access";
+export const ACCESS_COOKIE = "meridian.access";
 
 /** Long enough that a person is not re-entering the code every week. */
 export const ACCESS_MAX_AGE_SECONDS = 60 * 60 * 24 * 90;

@@ -21,7 +21,7 @@ export function AppTopbar() {
     const title =
         Object.entries(pageTitles).find(([route]) =>
             pathname.startsWith(route),
-        )?.[1] ?? "Quanta";
+        )?.[1] ?? "Meridian";
 
     return (
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center border-b border-border/70 bg-background/90 px-4 backdrop-blur-xl">

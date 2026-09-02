@@ -97,7 +97,7 @@ export function AppSidebar({ user }: { user: AccountUser }) {
 
                     <div className="min-w-0 group-data-[collapsible=icon]:hidden">
                         <p className="truncate text-sm font-semibold tracking-tight">
-                            Quanta
+                            Meridian
                         </p>
 
                         <p className="truncate text-[0.6875rem] text-muted-foreground">

@@ -11,9 +11,9 @@ set -a; source .env.test; set +a
 
 ADMIN_URL="${DATABASE_URL%/*}/postgres"
 
-echo "==> resetting quanta_test"
-psql "$ADMIN_URL" -tAc "drop database if exists quanta_test;" >/dev/null
-psql "$ADMIN_URL" -tAc "create database quanta_test;" >/dev/null
+echo "==> resetting meridian_test"
+psql "$ADMIN_URL" -tAc "drop database if exists meridian_test;" >/dev/null
+psql "$ADMIN_URL" -tAc "create database meridian_test;" >/dev/null
 
 echo "==> migrating"
 pnpm exec drizzle-kit migrate >/dev/null

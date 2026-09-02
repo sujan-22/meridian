@@ -1,5 +1,5 @@
 {
-    "name": "quanta",
+    "name": "meridian",
     "version": "0.1.0",
     "private": true,
     "description": "Quarter-hour time tracking built around one workflow: track the week, then fill the Friday timesheet in minutes.",

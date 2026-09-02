@@ -14,7 +14,7 @@ import { config } from "dotenv";
 
 config({ path: ".env.test", quiet: true, override: true });
 
-const A = "test-user-quanta";
+const A = "test-user-meridian";
 const B = "test-user-intruder";
 
 let failed = 0;
@@ -30,9 +30,9 @@ function check(label: string, ok: boolean, detail = "") {
 }
 
 async function main() {
-    if (!/quanta_test/.test(process.env.DATABASE_URL ?? "")) {
+    if (!/meridian_test/.test(process.env.DATABASE_URL ?? "")) {
         throw new Error(
-            "Refusing to run: DATABASE_URL is not the quanta_test database.",
+            "Refusing to run: DATABASE_URL is not the meridian_test database.",
         );
     }
 
