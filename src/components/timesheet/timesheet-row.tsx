@@ -61,6 +61,44 @@ export function TimesheetRow({
                 )}
             </button>
 
+            {/* Kept beside the checkbox rather than out at the right margin:
+                filling a timesheet is copy, paste, copy, paste, and on a wide
+                display the round trip to the far edge is the whole cost. The
+                fixed width keeps every description starting on the same line. */}
+            <div className="flex shrink-0 items-center gap-1.5 sm:w-[17.5rem]">
+                <span
+                    className={cn(
+                        "w-12 text-right font-mono text-sm font-medium tabular-nums",
+                        entered && "opacity-55",
+                    )}
+                >
+                    {hours}
+                </span>
+
+                <CopyButton
+                    label="Comment"
+                    copied={copiedKey === `${row.key}:comment`}
+                    onClick={() => onCopy(`${row.key}:comment`, row.comment)}
+                />
+
+                <CopyButton
+                    label={hours}
+                    copied={copiedKey === `${row.key}:hours`}
+                    onClick={() => onCopy(`${row.key}:hours`, hours)}
+                />
+
+                {row.ticketNumber && (
+                    <CopyButton
+                        icon={<Hash className="size-3" />}
+                        label={row.ticketNumber}
+                        copied={copiedKey === `${row.key}:ticket`}
+                        onClick={() =>
+                            onCopy(`${row.key}:ticket`, row.ticketNumber!)
+                        }
+                    />
+                )}
+            </div>
+
             <div className={cn("min-w-0 flex-1", entered && "opacity-55")}>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                     {row.ticketNumber ? (
@@ -123,40 +161,6 @@ export function TimesheetRow({
                             </li>
                         ))}
                     </ul>
-                )}
-            </div>
-
-            <div className="flex shrink-0 items-center gap-1.5">
-                <span
-                    className={cn(
-                        "w-12 text-right font-mono text-sm font-medium tabular-nums",
-                        entered && "opacity-55",
-                    )}
-                >
-                    {hours}
-                </span>
-
-                <CopyButton
-                    label="Comment"
-                    copied={copiedKey === `${row.key}:comment`}
-                    onClick={() => onCopy(`${row.key}:comment`, row.comment)}
-                />
-
-                <CopyButton
-                    label={hours}
-                    copied={copiedKey === `${row.key}:hours`}
-                    onClick={() => onCopy(`${row.key}:hours`, hours)}
-                />
-
-                {row.ticketNumber && (
-                    <CopyButton
-                        icon={<Hash className="size-3" />}
-                        label={row.ticketNumber}
-                        copied={copiedKey === `${row.key}:ticket`}
-                        onClick={() =>
-                            onCopy(`${row.key}:ticket`, row.ticketNumber!)
-                        }
-                    />
                 )}
             </div>
         </div>
