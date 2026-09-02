@@ -1,0 +1,228 @@
+enum BillingType {
+  BILLABLE
+  NON_BILLABLE
+}
+
+type Client {
+  archived: Boolean!
+  color: String
+  id: ID!
+  name: String!
+  shortName: String
+}
+
+input CreateClientInput {
+  color: String
+  name: String!
+  shortName: String
+}
+
+input CreateProjectInput {
+  clientId: ID!
+  color: String
+  defaultBillingType: BillingType
+  name: String!
+  polarisTask: String
+}
+
+input CreateTimeEntryInput {
+  billingType: BillingType
+  description: String!
+  endedAt: DateTime!
+  kind: EntryKind
+  projectId: ID!
+  startedAt: DateTime!
+  ticketNumber: String
+  unbillablePercent: Int
+}
+
+"""A calendar day, serialised as YYYY-MM-DD."""
+scalar Date
+
+"""An absolute instant in time, serialised as an ISO 8601 string."""
+scalar DateTime
+
+enum EntryKind {
+  MEETING
+  WORK
+}
+
+enum EntryPortion {
+  BILLABLE
+  NON_BILLABLE
+}
+
+enum EstimateStatus {
+  NEARING
+  NONE
+  OK
+  OVER
+}
+
+type ImportResult {
+  clientsCreated: [String!]!
+  duplicatesSkipped: Int!
+  imported: Int!
+  projectsCreated: [String!]!
+  unmatchedRows: Int!
+}
+
+input ImportTimeEntryInput {
+  billable: Boolean!
+  description: String!
+  endedAt: DateTime!
+  projectName: String!
+  startedAt: DateTime!
+}
+
+type Mutation {
+  clearTicketEstimate(projectId: ID!, ticketNumber: String!): TicketSummary!
+  completeTimesheetWeek(weekEnd: Date!, weekStart: Date!): TimesheetWeek!
+  createClient(input: CreateClientInput!): Client!
+  createProject(input: CreateProjectInput!): Project!
+  createTimeEntry(input: CreateTimeEntryInput!): TimeEntry!
+  deleteProject(id: ID!): Boolean!
+  deleteTimeEntry(id: ID!): Boolean!
+  importTimeEntries(createMissingProjects: Boolean = true, rows: [ImportTimeEntryInput!]!): ImportResult!
+  markTimeEntriesTransferred(ids: [ID!]!, portion: EntryPortion, transferred: Boolean!): [TimeEntry!]!
+  reopenTimesheetWeek(weekEnd: Date!, weekStart: Date!): TimesheetWeek!
+  setTicketEstimate(input: SetTicketEstimateInput!): TicketSummary!
+  startTimer(input: StartTimerInput!): TimeEntry!
+  stopTimer(endedAt: DateTime, id: ID!): TimeEntry!
+  updatePreferences(input: UpdatePreferencesInput!): Preferences!
+  updateProject(id: ID!, input: UpdateProjectInput!): Project!
+  updateTimeEntry(id: ID!, input: UpdateTimeEntryInput!): TimeEntry!
+}
+
+type Preferences {
+  calendarZoom: Int!
+  dailyTargetMinutes: Int!
+  dayEndHour: Int!
+  dayStartHour: Int!
+  showWeekend: Boolean!
+  weekStartsOn: Int!
+  weeklyTargetMinutes: Int!
+}
+
+type Project {
+  archived: Boolean!
+  client: Client!
+  color: String
+  createdAt: DateTime!
+  defaultBillingType: BillingType!
+  id: ID!
+  name: String!
+  polarisTask: String
+}
+
+type ProjectSummary {
+  entryCount: Int!
+  lastTrackedAt: DateTime
+  project: Project!
+  totalMinutes: Int!
+}
+
+type Query {
+  activeTimer: TimeEntry
+  clients(includeArchived: Boolean = false): [Client!]!
+  descriptionSuggestions(limit: Int = 5, query: String!): [TimeEntry!]!
+  entries(from: DateTime!, to: DateTime!): [TimeEntry!]!
+  health: String!
+  preferences: Preferences!
+  projectSummaries(includeArchived: Boolean = false): [ProjectSummary!]!
+  projects(includeArchived: Boolean = false): [Project!]!
+  recentEntries(limit: Int = 6): [TimeEntry!]!
+  ticketSummaries: [TicketSummary!]!
+  timesheetWeek(weekEnd: Date!, weekStart: Date!): TimesheetWeek!
+}
+
+input SetTicketEstimateInput {
+  maxMinutes: Int!
+  minMinutes: Int
+  notes: String
+  projectId: ID!
+  ticketNumber: String!
+}
+
+input StartTimerInput {
+  billingType: BillingType
+  description: String!
+  kind: EntryKind
+  projectId: ID!
+  startedAt: DateTime
+  ticketNumber: String
+  unbillablePercent: Int
+}
+
+type TicketSummary {
+  entryCount: Int!
+  estimateMaxMinutes: Int
+  estimateMinMinutes: Int
+  estimateNotes: String
+  firstTrackedAt: DateTime
+  lastTrackedAt: DateTime
+  project: Project!
+  remainingMinutes: Int
+  status: EstimateStatus!
+  ticketNumber: String!
+  trackedMinutes: Int!
+}
+
+type TimeEntry {
+  billableMinutes: Int!
+  billedMinutes: Int!
+  billingType: BillingType!
+  description: String!
+  durationSeconds: Int
+  elapsedSeconds: Int!
+  endedAt: DateTime
+  id: ID!
+  isRunning: Boolean!
+  kind: EntryKind!
+  nonBillableEnteredAt: DateTime
+  project: Project!
+  startedAt: DateTime!
+  ticketNumber: String
+  timesheetDurationMinutes: Int
+  timesheetEnteredAt: DateTime
+  unbillableMinutes: Int!
+  unbillablePercent: Int!
+}
+
+type TimesheetWeek {
+  completedAt: DateTime
+  isComplete: Boolean!
+  targetMinutes: Int!
+  weekEnd: Date!
+  weekStart: Date!
+}
+
+input UpdatePreferencesInput {
+  calendarZoom: Int
+  dailyTargetMinutes: Int
+  dayEndHour: Int
+  dayStartHour: Int
+  showWeekend: Boolean
+  weekStartsOn: Int
+  weeklyTargetMinutes: Int
+}
+
+input UpdateProjectInput {
+  archived: Boolean
+  clientId: ID
+  color: String
+  defaultBillingType: BillingType
+  name: String
+  polarisTask: String
+}
+
+input UpdateTimeEntryInput {
+  billingType: BillingType
+  description: String
+  endedAt: DateTime
+  kind: EntryKind
+  projectId: ID
+  startedAt: DateTime
+  ticketNumber: String
+  unbillablePercent: Int
+}

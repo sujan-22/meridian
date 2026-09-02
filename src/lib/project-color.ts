@@ -4,35 +4,48 @@
  * two adjacent blocks in the same default grey.
  */
 
-const FALLBACK_COLORS = [
-    "#6574cd",
-    "#d84a4a",
-    "#31b5a4",
-    "#d88c34",
-    "#d4c742",
-    "#9b6bd6",
-    "#4a9fd8",
-    "#5fb85f",
-] as const;
-
 /**
- * The colours offered when creating or editing a project. Each one has to stay
- * legible as a 8px dot and as a calendar block against a near-black panel.
+ * The colours offered when creating or editing a project.
+ *
+ * Every one sits at the same lightness and chroma in OKLCH (L 0.74, C ~0.15)
+ * with the hues spread around the wheel, so they read as one family rather
+ * than a bag of unrelated web colours - and each stays legible both as an 8px
+ * dot and as a calendar block against a near-black panel. A project is not
+ * limited to these; any colour can be set by hand.
  */
 export const PROJECT_COLOR_PALETTE = [
-    { name: "Indigo", value: "#6574cd" },
-    { name: "Violet", value: "#9b6bd6" },
-    { name: "Blue", value: "#4a9fd8" },
-    { name: "Teal", value: "#31b5a4" },
-    { name: "Green", value: "#5fb85f" },
-    { name: "Lime", value: "#a3c644" },
-    { name: "Yellow", value: "#d4c742" },
-    { name: "Amber", value: "#d88c34" },
-    { name: "Orange", value: "#d9682f" },
-    { name: "Red", value: "#d84a4a" },
-    { name: "Pink", value: "#d6538f" },
-    { name: "Slate", value: "#7b8794" },
+    { name: "Rose", value: "#fa7f91" },
+    { name: "Coral", value: "#fa8467" },
+    { name: "Amber", value: "#e69825" },
+    { name: "Lime", value: "#95bb46" },
+    { name: "Green", value: "#60c473" },
+    { name: "Teal", value: "#12c3bf" },
+    { name: "Cyan", value: "#07bfde" },
+    { name: "Sky", value: "#39b5ff" },
+    { name: "Blue", value: "#82a8fd" },
+    { name: "Indigo", value: "#a29dff" },
+    { name: "Violet", value: "#c190f6" },
+    { name: "Orchid", value: "#df86d7" },
+    { name: "Slate", value: "#9aa5b1" },
 ] as const;
+
+/** Used when a project has no colour of its own. */
+const FALLBACK_COLORS = PROJECT_COLOR_PALETTE.map((entry) => entry.value);
+
+/** A six-digit hex colour, which is what the colour input speaks. */
+export const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
+export function isValidHexColor(value: string): boolean {
+    return HEX_COLOR.test(value.trim());
+}
+
+/** Accepts `abc123` as readily as `#abc123`, and normalises the case. */
+export function normalizeHexColor(value: string): string | null {
+    const trimmed = value.trim();
+    const withHash = trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
+
+    return isValidHexColor(withHash) ? withHash.toLowerCase() : null;
+}
 
 export function projectColor(project: {
     id: string;

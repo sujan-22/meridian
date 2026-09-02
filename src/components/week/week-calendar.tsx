@@ -54,7 +54,6 @@ interface WeekCalendarProps {
     dayEndHour: number;
     onEditEntry: (entry: TimeEntryFieldsFragment) => void;
     onDuplicateEntry: (entry: TimeEntryFieldsFragment) => void;
-    onContinueEntry: (entry: TimeEntryFieldsFragment) => void;
     onDeleteEntry: (entry: TimeEntryFieldsFragment) => void;
     onSelectSlot: (day: Date, minuteOfDay: number) => void;
     /** A range swept out on empty grid. */
@@ -81,7 +80,6 @@ export function WeekCalendar({
     dayEndHour,
     onEditEntry,
     onDuplicateEntry,
-    onContinueEntry,
     onDeleteEntry,
     onSelectSlot,
     onSelectRange,
@@ -283,7 +281,6 @@ export function WeekCalendar({
                         onClose={closePopover}
                         onEdit={runAction(onEditEntry)}
                         onDuplicate={runAction(onDuplicateEntry)}
-                        onContinue={runAction(onContinueEntry)}
                         onDelete={runAction(onDeleteEntry)}
                     />
                 )}
@@ -499,8 +496,10 @@ function DayColumn({
                             index === 0
                                 ? "border-transparent"
                                 : tick.isHour
-                                  ? "border-border/40"
-                                  : "border-border/20",
+                                  ? "border-grid-hour"
+                                  : tick.isHalf
+                                    ? "border-grid-half"
+                                    : "border-grid-quarter",
                         )}
                         style={{
                             top: `${((tick.minute - startHour * 60) / 60) * hourHeight}px`,
@@ -734,6 +733,8 @@ interface Tick {
     minute: number;
     label: string;
     isHour: boolean;
+    /** Half past. Sits between the hour and the quarters in weight. */
+    isHalf: boolean;
 }
 
 function buildTicks(
@@ -755,6 +756,7 @@ function buildTicks(
             minute,
             label: `${String(hour).padStart(2, "0")}:${String(rest).padStart(2, "0")}`,
             isHour: rest === 0,
+            isHalf: rest === 30,
         });
     }
 

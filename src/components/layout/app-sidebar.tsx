@@ -7,7 +7,6 @@ import {
     Building2,
     CalendarDays,
     CheckSquare2,
-    Clock3,
     FolderKanban,
     Gauge,
     Settings,
@@ -34,11 +33,6 @@ const navigation = [
     {
         label: "Track",
         items: [
-            {
-                title: "Today",
-                href: "/today",
-                icon: Clock3,
-            },
             {
                 title: "Week",
                 href: "/week",

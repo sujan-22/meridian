@@ -21,15 +21,13 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { DescriptionSuggestions } from "@/components/timer/description-suggestions";
 import { KindToggle } from "@/components/timer/kind-toggle";
 import {
     ProjectSelect,
     type SelectableProject,
 } from "@/components/timer/project-select";
-import {
-    nearestQuarterTime,
-    TimeSelect,
-} from "@/components/timer/time-select";
+import { nearestQuarterTime, TimeSelect } from "@/components/timer/time-select";
 import { useEntryActions } from "@/components/timer/use-entry-actions";
 import type {
     BillingType,
@@ -105,13 +103,7 @@ interface EntryFormProps {
     onDone: () => void;
 }
 
-function EntryForm({
-    projects,
-    day,
-    entry,
-    initial,
-    onDone,
-}: EntryFormProps) {
+function EntryForm({ projects, day, entry, initial, onDone }: EntryFormProps) {
     const editing = Boolean(entry);
 
     const [description, setDescription] = useState(
@@ -145,6 +137,7 @@ function EntryForm({
     );
 
     const [error, setError] = useState<string | null>(null);
+    const [suggestionsOpen, setSuggestionsOpen] = useState(false);
 
     const { createEntry, updateEntry, pending } = useEntryActions();
 
@@ -167,6 +160,7 @@ function EntryForm({
      */
     function handleDescriptionChange(next: string) {
         setDescription(next);
+        setSuggestionsOpen(true);
 
         const detected = parseEntryDescription(next, projects);
 
@@ -243,15 +237,37 @@ function EntryForm({
 
             <div className="flex flex-col gap-4">
                 <Field label="Description">
-                    <Textarea
-                        value={description}
-                        onChange={(event) =>
-                            handleDescriptionChange(event.target.value)
-                        }
-                        rows={3}
-                        placeholder="Gardner 14214 - Discussion with lead - Review SQL queries"
-                        className="resize-none"
-                    />
+                    {/* The list hangs off the field, so it needs a positioned
+                        ancestor of its own. */}
+                    <div className="relative">
+                        <Textarea
+                            value={description}
+                            onChange={(event) =>
+                                handleDescriptionChange(event.target.value)
+                            }
+                            onFocus={() => setSuggestionsOpen(true)}
+                            rows={3}
+                            placeholder="Gardner 14214 - Discussion with lead - Review SQL queries"
+                            className="resize-none"
+                        />
+
+                        <DescriptionSuggestions
+                            query={description}
+                            open={suggestionsOpen}
+                            onDismiss={() => setSuggestionsOpen(false)}
+                            onPick={(picked) => {
+                                setSuggestionsOpen(false);
+
+                                // Everything about the picked entry comes
+                                // across; it is the same work being logged
+                                // again, not just the same wording.
+                                setDescription(picked.description);
+                                setProjectId(picked.project.id);
+                                setTicketNumber(picked.ticketNumber ?? "");
+                                setKind(picked.kind);
+                            }}
+                        />
+                    </div>
                 </Field>
 
                 <div className="flex items-center justify-between gap-4">
@@ -363,10 +379,12 @@ function EntryForm({
                                 </span>
                             </div>
 
-                            {range && <SplitPreview
-                                totalMinutes={range.billedMinutes}
-                                percent={percent}
-                            />}
+                            {range && (
+                                <SplitPreview
+                                    totalMinutes={range.billedMinutes}
+                                    percent={percent}
+                                />
+                            )}
                         </div>
                     </Field>
                 )}
