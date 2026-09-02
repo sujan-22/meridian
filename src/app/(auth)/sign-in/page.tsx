@@ -38,7 +38,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
                 <div className="space-y-1.5">
                     <h1 className="text-xl font-semibold tracking-tight">
-                        Quanta
+                        Meridian
                     </h1>
 
                     <p className="text-sm text-muted-foreground">

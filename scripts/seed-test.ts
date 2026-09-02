@@ -21,7 +21,7 @@ if (!url) {
     throw new Error("DATABASE_URL is not defined");
 }
 
-if (!/quanta_test/.test(url)) {
+if (!/meridian_test/.test(url)) {
     throw new Error(
         `Refusing to seed: ${url.replace(/:[^:@]*@/, ":***@")} is not the test database`,
     );
@@ -63,9 +63,9 @@ async function seed() {
     const [owner] = await db
         .insert(users)
         .values({
-            id: "test-user-quanta",
+            id: "test-user-meridian",
             name: "Test User",
-            email: "test@quanta.local",
+            email: "test@meridian.local",
             emailVerified: true,
         })
         .returning();

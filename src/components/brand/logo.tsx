@@ -1,54 +1,35 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The Quanta mark: a square split into four, with one quarter filled.
+ * The Meridian mark: the meridian line crossing the day.
  *
- * Everything in the app is measured in quarter hours - the smallest unit that
- * can be billed - so the mark is that unit rather than yet another clock face.
+ * A meridian is the line the sun crosses at noon - the thing that divides a
+ * day into its morning and its afternoon, and where a.m. and p.m. get their
+ * names. The circle is the day, the filled half is the part of it already
+ * spent, and the line runs past both because the meridian is not part of the
+ * day it divides.
  */
 export function Logo({ className }: { className?: string }) {
     return (
         <svg
             viewBox="0 0 24 24"
             fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
             aria-hidden="true"
             className={cn("size-5", className)}
         >
-            <rect
-                x="13"
-                y="3"
-                width="8"
-                height="8"
-                rx="2.5"
+            {/* Morning, already behind you. */}
+            <path
+                d="M12 19 A 7 7 0 0 1 12 5"
                 fill="currentColor"
+                stroke="none"
             />
-            <rect
-                x="3"
-                y="3"
-                width="8"
-                height="8"
-                rx="2.5"
-                fill="currentColor"
-                opacity="0.32"
-            />
-            <rect
-                x="3"
-                y="13"
-                width="8"
-                height="8"
-                rx="2.5"
-                fill="currentColor"
-                opacity="0.32"
-            />
-            <rect
-                x="13"
-                y="13"
-                width="8"
-                height="8"
-                rx="2.5"
-                fill="currentColor"
-                opacity="0.32"
-            />
+
+            <circle cx="12" cy="12" r="7" />
+
+            <path d="M12 2 V 22" />
         </svg>
     );
 }

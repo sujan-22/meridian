@@ -95,16 +95,22 @@ export function AccountMenu({ user }: { user: AccountUser }) {
 }
 
 function Avatar({ user }: { user: AccountUser }) {
-    if (user.image) {
+    const [failed, setFailed] = useState(false);
+
+    if (user.image && !failed) {
         return (
             // Google's avatar host is not worth a next/image loader config for
-            // one 32px square.
+            // one 32px square. `no-referrer` is required, not cosmetic:
+            // lh3.googleusercontent.com answers 403 to a request carrying a
+            // Referer from another origin, which renders as a broken image.
             // eslint-disable-next-line @next/next/no-img-element
             <img
                 src={user.image}
                 alt=""
                 width={32}
                 height={32}
+                referrerPolicy="no-referrer"
+                onError={() => setFailed(true)}
                 className="size-8 shrink-0 rounded-lg object-cover"
             />
         );
