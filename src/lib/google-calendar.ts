@@ -36,6 +36,8 @@ export class GoogleCalendarError extends Error {
     constructor(
         message: string,
         readonly status: number,
+        /** Google says the token is valid but does not cover the calendar. */
+        readonly insufficientScope = false,
     ) {
         super(message);
         this.name = "GoogleCalendarError";
@@ -123,11 +125,23 @@ export async function fetchCalendarEvents(
         if (!response.ok) {
             const body = await response.text().catch(() => "");
 
+            // Google distinguishes "this token is no good" from "this token is
+            // fine but does not cover the calendar", and only the second is
+            // fixed by granting the permission again.
+            const insufficientScope =
+                response.status === 403 &&
+                /insufficient|ACCESS_TOKEN_SCOPE_INSUFFICIENT|insufficientPermissions/i.test(
+                    body,
+                );
+
             throw new GoogleCalendarError(
-                response.status === 401 || response.status === 403
-                    ? "Google would not accept the calendar request. Sign out and back in to grant calendar access."
-                    : `Google Calendar returned ${response.status}. ${body.slice(0, 200)}`,
+                insufficientScope
+                    ? "Google accepted the sign-in but not the calendar permission. Sign in again and allow calendar access."
+                    : response.status === 401
+                      ? "Google would not accept the calendar request. Sign in again."
+                      : `Google Calendar returned ${response.status}. ${body.slice(0, 200)}`,
                 response.status,
+                insufficientScope,
             );
         }
 

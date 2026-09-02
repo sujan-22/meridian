@@ -18,7 +18,7 @@ query CalendarStatus {
         lastSyncedAt
         autoPromote
         defaultProjectId
-        hasCalendarScope
+        googleLinked
         needsReconnect
     }
 }
@@ -56,7 +56,7 @@ mutation UpdateCalendarSettings(
         lastSyncedAt
         autoPromote
         defaultProjectId
-        hasCalendarScope
+        googleLinked
         needsReconnect
     }
 }

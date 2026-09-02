@@ -77,10 +77,11 @@ export function CalendarPanel() {
                         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
 
                         <span>
-                            Google stopped renewing calendar access. It expires
-                            access every seven days while the OAuth app is in
-                            testing, so this will come round again — signing in
-                            restores it each time.
+                            Calendar access is not working. Sign in again and
+                            allow calendar access when Google asks. This also
+                            comes round every seven days on its own: Google
+                            expires the grant that often while the OAuth app is
+                            in testing.
                         </span>
                     </p>
 
@@ -94,7 +95,7 @@ export function CalendarPanel() {
                         {reconnecting ? "Signing out…" : "Reconnect"}
                     </Button>
                 </div>
-            ) : status?.hasCalendarScope ? (
+            ) : status?.googleLinked ? (
                 <div className="flex flex-col gap-4">
                     <p className="flex items-center gap-1.5 text-xs text-emerald-400">
                         <CircleCheck className="size-3.5" />
@@ -186,13 +187,8 @@ export function CalendarPanel() {
                         <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
 
                         <span>
-                            Calendar access has not been granted for this
-                            account. Sign in again — and on Google&rsquo;s
-                            permissions step, <strong>tick the box</strong> for
-                            &ldquo;See and download any calendar you can access
-                            using your Google Calendar&rdquo;. Google leaves it
-                            unticked by default, and clicking Continue without
-                            it grants everything except the calendar.
+                            This account is not linked to Google, so there is no
+                            calendar to read. Signing in with Google links it.
                         </span>
                     </p>
 

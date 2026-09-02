@@ -135,7 +135,7 @@ export function WeekView() {
      * promote themselves. Synced once per week viewed, not on every render.
      */
     const syncedRanges = useRef(new Set<string>());
-    const connected = calendarStatus.data?.calendarStatus.hasCalendarScope;
+    const connected = calendarStatus.data?.calendarStatus.googleLinked;
 
     useEffect(() => {
         if (!range || !connected) {

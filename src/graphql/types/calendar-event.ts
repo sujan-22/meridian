@@ -32,8 +32,12 @@ export interface CalendarStatusModel {
     lastSyncedAt: Date | null;
     autoPromote: boolean;
     defaultProjectId: string | null;
-    /** False when the Google grant does not cover the calendar. */
-    hasCalendarScope: boolean;
+    /**
+     * There is a Google account to read a calendar with. Whether the grant
+     * actually covers the calendar is settled by calling the API, not by
+     * inspecting a stored scope string.
+     */
+    googleLinked: boolean;
     /** The grant covered it once, and Google has since stopped renewing. */
     needsReconnect: boolean;
 }
@@ -43,7 +47,7 @@ export function calendarStatusRef(builder: AppBuilder) {
         fields: (t) => ({
             connected: t.exposeBoolean("connected"),
             autoPromote: t.exposeBoolean("autoPromote"),
-            hasCalendarScope: t.exposeBoolean("hasCalendarScope"),
+            googleLinked: t.exposeBoolean("googleLinked"),
             needsReconnect: t.exposeBoolean("needsReconnect"),
 
             defaultProjectId: t.exposeID("defaultProjectId", {

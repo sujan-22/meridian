@@ -7,7 +7,7 @@ import {
 
 import type { AppBuilder } from "../builder";
 import type { Refs } from "../refs";
-import { hasCalendarScope } from "@/lib/google-token";
+import { hasGoogleAccount } from "@/lib/google-token";
 
 export function registerCalendarQueries(builder: AppBuilder, refs: Refs) {
     builder.queryFields((t) => ({
@@ -39,7 +39,7 @@ export function registerCalendarQueries(builder: AppBuilder, refs: Refs) {
                     lastSyncedAt: connection?.lastSyncedAt ?? null,
                     autoPromote: connection?.autoPromote ?? true,
                     defaultProjectId: connection?.defaultProjectId ?? null,
-                    hasCalendarScope: await hasCalendarScope(ctx.userId),
+                    googleLinked: await hasGoogleAccount(ctx.userId),
                     needsReconnect: connection?.reauthRequiredAt != null,
                 };
             },
