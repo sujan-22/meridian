@@ -7,10 +7,17 @@ import {
     uuid,
 } from "drizzle-orm/pg-core";
 
+import { users } from "./auth";
+
 export const clients = pgTable(
     "clients",
     {
         id: uuid("id").defaultRandom().primaryKey(),
+
+        /** Every row belongs to exactly one person; nothing is shared. */
+        userId: text("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
 
         name: text("name").notNull(),
 
@@ -33,5 +40,7 @@ export const clients = pgTable(
             .notNull()
             .$onUpdate(() => new Date()),
     },
-    (table) => [uniqueIndex("clients_name_unique").on(table.name)],
+    (table) => [
+        uniqueIndex("clients_name_unique").on(table.userId, table.name),
+    ],
 );

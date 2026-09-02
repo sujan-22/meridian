@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { clients, projects, timeEntries } from "@/db/schema";
@@ -45,6 +45,7 @@ const entryStats = db
     .as("entry_stats");
 
 export async function findProjectSummaries(
+    userId: string,
     includeArchived: boolean,
 ): Promise<ProjectSummaryRow[]> {
     const rows = await db
@@ -58,7 +59,14 @@ export async function findProjectSummaries(
         .from(projects)
         .innerJoin(clients, eq(projects.clientId, clients.id))
         .leftJoin(entryStats, eq(entryStats.projectId, projects.id))
-        .where(includeArchived ? undefined : eq(projects.archived, false))
+        .where(
+            includeArchived
+                ? eq(projects.userId, userId)
+                : and(
+                      eq(projects.userId, userId),
+                      eq(projects.archived, false),
+                  ),
+        )
         .orderBy(asc(clients.name), asc(projects.name));
 
     return rows.map((row) => ({
@@ -75,24 +83,33 @@ export async function findProjectSummaries(
 }
 
 export async function findProjectById(
+    userId: string,
     id: string,
 ): Promise<ProjectWithClient | null> {
     const rows = await db
         .select({ project: projects, client: clients })
         .from(projects)
         .innerJoin(clients, eq(projects.clientId, clients.id))
-        .where(eq(projects.id, id))
+        .where(and(eq(projects.userId, userId), eq(projects.id, id)))
         .limit(1);
 
     return rows[0] ? { ...rows[0].project, client: rows[0].client } : null;
 }
 
 /** How many time entries reference a project - deletion is blocked if any do. */
-export async function countProjectEntries(projectId: string): Promise<number> {
+export async function countProjectEntries(
+    userId: string,
+    projectId: string,
+): Promise<number> {
     const [row] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(timeEntries)
-        .where(eq(timeEntries.projectId, projectId));
+        .where(
+            and(
+                eq(timeEntries.userId, userId),
+                eq(timeEntries.projectId, projectId),
+            ),
+        );
 
     return row?.count ?? 0;
 }

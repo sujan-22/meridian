@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import { clients, projects } from "@/db/schema";
@@ -24,14 +24,14 @@ export function registerCatalogQueries(builder: AppBuilder, refs: Refs) {
         preferences: t.field({
             type: refs.Preferences,
 
-            resolve: () => findPreferences(),
+            resolve: (_parent, _args, ctx) => findPreferences(ctx.userId),
         }),
 
         /** Every ticket with tracked time, and how it sits against estimate. */
         ticketSummaries: t.field({
             type: [refs.TicketSummary],
 
-            resolve: () => findTicketSummaries(),
+            resolve: (_parent, _args, ctx) => findTicketSummaries(ctx.userId),
         }),
 
         timesheetWeek: t.field({
@@ -42,10 +42,10 @@ export function registerCatalogQueries(builder: AppBuilder, refs: Refs) {
                 weekEnd: t.arg({ type: "Date", required: true }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 const [row, preferences] = await Promise.all([
-                    findTimesheetWeek(args.weekStart),
-                    findPreferences(),
+                    findTimesheetWeek(ctx.userId, args.weekStart),
+                    findPreferences(ctx.userId),
                 ]);
 
                 return toTimesheetWeekModel(
@@ -66,14 +66,17 @@ export function registerCatalogQueries(builder: AppBuilder, refs: Refs) {
                 }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 return db
                     .select()
                     .from(clients)
                     .where(
                         args.includeArchived
-                            ? undefined
-                            : eq(clients.archived, false),
+                            ? eq(clients.userId, ctx.userId)
+                            : and(
+                                  eq(clients.userId, ctx.userId),
+                                  eq(clients.archived, false),
+                              ),
                     )
                     .orderBy(asc(clients.name));
             },
@@ -88,7 +91,7 @@ export function registerCatalogQueries(builder: AppBuilder, refs: Refs) {
                 }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 const rows = await db
                     .select({
                         project: projects,
@@ -98,8 +101,11 @@ export function registerCatalogQueries(builder: AppBuilder, refs: Refs) {
                     .innerJoin(clients, eq(projects.clientId, clients.id))
                     .where(
                         args.includeArchived
-                            ? undefined
-                            : eq(projects.archived, false),
+                            ? eq(projects.userId, ctx.userId)
+                            : and(
+                                  eq(projects.userId, ctx.userId),
+                                  eq(projects.archived, false),
+                              ),
                     )
                     .orderBy(asc(clients.name), asc(projects.name));
 
@@ -120,8 +126,8 @@ export function registerCatalogQueries(builder: AppBuilder, refs: Refs) {
                 }),
             },
 
-            resolve: (_parent, args) =>
-                findProjectSummaries(args.includeArchived ?? false),
+            resolve: (_parent, args, ctx) =>
+                findProjectSummaries(ctx.userId, args.includeArchived ?? false),
         }),
     }));
 }

@@ -8,6 +8,7 @@ import {
     varchar,
 } from "drizzle-orm/pg-core";
 
+import { users } from "./auth";
 import { projects } from "./projects";
 
 /**
@@ -21,6 +22,11 @@ export const ticketEstimates = pgTable(
     "ticket_estimates",
     {
         id: uuid("id").defaultRandom().primaryKey(),
+
+        /** Every row belongs to exactly one person; nothing is shared. */
+        userId: text("user_id")
+            .notNull()
+            .references(() => users.id, { onDelete: "cascade" }),
 
         projectId: uuid("project_id")
             .notNull()

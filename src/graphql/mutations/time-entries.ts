@@ -44,11 +44,14 @@ function durationFields(startedAt: Date, endedAt: Date) {
     };
 }
 
-async function requireProjectBilling(projectId: string): Promise<BillingType> {
+async function requireProjectBilling(
+    userId: string,
+    projectId: string,
+): Promise<BillingType> {
     const rows = await db
         .select({ defaultBillingType: projects.defaultBillingType })
         .from(projects)
-        .where(eq(projects.id, projectId))
+        .where(and(eq(projects.userId, userId), eq(projects.id, projectId)))
         .limit(1);
 
     if (!rows[0]) {
@@ -58,8 +61,11 @@ async function requireProjectBilling(projectId: string): Promise<BillingType> {
     return rows[0].defaultBillingType;
 }
 
-async function loadOrThrow(id: string): Promise<TimeEntryModel> {
-    const entry = await findEntryById(id);
+async function loadOrThrow(
+    userId: string,
+    id: string,
+): Promise<TimeEntryModel> {
+    const entry = await findEntryById(userId, id);
 
     if (!entry) {
         throw new GraphQLError(`No time entry with id ${id}`);
@@ -72,8 +78,8 @@ async function loadOrThrow(id: string): Promise<TimeEntryModel> {
  * Close whatever timer is currently running. Only one entry may be open at a
  * time, so starting new work implicitly stops the previous timer.
  */
-async function stopRunningTimers(at: Date): Promise<void> {
-    const running = await findRunningEntry();
+async function stopRunningTimers(userId: string, at: Date): Promise<void> {
+    const running = await findRunningEntry(userId);
 
     if (!running) {
         return;
@@ -90,7 +96,13 @@ async function stopRunningTimers(at: Date): Promise<void> {
             endedAt,
             ...durationFields(running.startedAt, endedAt),
         })
-        .where(and(eq(timeEntries.id, running.id), isNull(timeEntries.endedAt)));
+        .where(
+            and(
+                eq(timeEntries.userId, userId),
+                eq(timeEntries.id, running.id),
+                isNull(timeEntries.endedAt),
+            ),
+        );
 }
 
 export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
@@ -140,19 +152,20 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                 input: t.arg({ type: StartTimerInput, required: true }),
             },
 
-            resolve: async (_parent, { input }) => {
+            resolve: async (_parent, { input }, ctx) => {
                 const projectId = String(input.projectId);
                 const startedAt = input.startedAt ?? new Date();
 
-                await stopRunningTimers(startedAt);
+                await stopRunningTimers(ctx.userId, startedAt);
 
                 const billingType =
                     input.billingType ??
-                    (await requireProjectBilling(projectId));
+                    (await requireProjectBilling(ctx.userId, projectId));
 
                 const [created] = await db
                     .insert(timeEntries)
                     .values({
+                        userId: ctx.userId,
                         projectId,
                         description: input.description.trim(),
                         ticketNumber: input.ticketNumber?.trim() || null,
@@ -166,7 +179,7 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                     })
                     .returning({ id: timeEntries.id });
 
-                return loadOrThrow(created.id);
+                return loadOrThrow(ctx.userId, created.id);
             },
         }),
 
@@ -178,9 +191,9 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                 endedAt: t.arg({ type: "DateTime" }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 const id = String(args.id);
-                const entry = await loadOrThrow(id);
+                const entry = await loadOrThrow(ctx.userId, id);
 
                 if (entry.endedAt) {
                     return entry;
@@ -194,9 +207,14 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                         endedAt,
                         ...durationFields(entry.startedAt, endedAt),
                     })
-                    .where(eq(timeEntries.id, id));
+                    .where(
+                        and(
+                            eq(timeEntries.userId, ctx.userId),
+                            eq(timeEntries.id, id),
+                        ),
+                    );
 
-                return loadOrThrow(id);
+                return loadOrThrow(ctx.userId, id);
             },
         }),
 
@@ -207,16 +225,17 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                 input: t.arg({ type: CreateTimeEntryInput, required: true }),
             },
 
-            resolve: async (_parent, { input }) => {
+            resolve: async (_parent, { input }, ctx) => {
                 const projectId = String(input.projectId);
 
                 const billingType =
                     input.billingType ??
-                    (await requireProjectBilling(projectId));
+                    (await requireProjectBilling(ctx.userId, projectId));
 
                 const [created] = await db
                     .insert(timeEntries)
                     .values({
+                        userId: ctx.userId,
                         projectId,
                         description: input.description.trim(),
                         ticketNumber: input.ticketNumber?.trim() || null,
@@ -229,7 +248,7 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                     })
                     .returning({ id: timeEntries.id });
 
-                return loadOrThrow(created.id);
+                return loadOrThrow(ctx.userId, created.id);
             },
         }),
 
@@ -241,9 +260,9 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                 input: t.arg({ type: UpdateTimeEntryInput, required: true }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 const id = String(args.id);
-                const entry = await loadOrThrow(id);
+                const entry = await loadOrThrow(ctx.userId, id);
                 const { input } = args;
 
                 const startedAt = input.startedAt ?? entry.startedAt;
@@ -290,9 +309,14 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                                   timesheetDurationMinutes: null,
                               }),
                     })
-                    .where(eq(timeEntries.id, id));
+                    .where(
+                        and(
+                            eq(timeEntries.userId, ctx.userId),
+                            eq(timeEntries.id, id),
+                        ),
+                    );
 
-                return loadOrThrow(id);
+                return loadOrThrow(ctx.userId, id);
             },
         }),
 
@@ -301,10 +325,15 @@ export function registerTimeEntryMutations(builder: AppBuilder, refs: Refs) {
                 id: t.arg.id({ required: true }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 const deleted = await db
                     .delete(timeEntries)
-                    .where(eq(timeEntries.id, String(args.id)))
+                    .where(
+                        and(
+                            eq(timeEntries.userId, ctx.userId),
+                            eq(timeEntries.id, String(args.id)),
+                        ),
+                    )
                     .returning({ id: timeEntries.id });
 
                 return deleted.length > 0;

@@ -15,7 +15,7 @@ export function registerTimeEntryQueries(builder: AppBuilder, refs: Refs) {
             type: refs.TimeEntry,
             nullable: true,
 
-            resolve: () => findRunningEntry(),
+            resolve: (_parent, _args, ctx) => findRunningEntry(ctx.userId),
         }),
 
         /**
@@ -30,7 +30,8 @@ export function registerTimeEntryQueries(builder: AppBuilder, refs: Refs) {
                 to: t.arg({ type: "DateTime", required: true }),
             },
 
-            resolve: (_parent, args) => findEntriesBetween(args.from, args.to),
+            resolve: (_parent, args, ctx) =>
+                findEntriesBetween(ctx.userId, args.from, args.to),
         }),
 
         /** Distinct recent work, for resuming something without retyping it. */
@@ -41,7 +42,8 @@ export function registerTimeEntryQueries(builder: AppBuilder, refs: Refs) {
                 limit: t.arg.int({ defaultValue: 6 }),
             },
 
-            resolve: (_parent, args) => findRecentEntries(args.limit ?? 6),
+            resolve: (_parent, args, ctx) =>
+                findRecentEntries(ctx.userId, args.limit ?? 6),
         }),
 
         /** Past descriptions matching what is currently being typed. */
@@ -53,8 +55,8 @@ export function registerTimeEntryQueries(builder: AppBuilder, refs: Refs) {
                 limit: t.arg.int({ defaultValue: 5 }),
             },
 
-            resolve: (_parent, args) =>
-                findDescriptionSuggestions(args.query, args.limit ?? 5),
+            resolve: (_parent, args, ctx) =>
+                findDescriptionSuggestions(ctx.userId, args.query, args.limit ?? 5),
         }),
     }));
 }

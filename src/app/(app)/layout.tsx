@@ -1,5 +1,8 @@
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
+import { auth } from "@/lib/auth";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -8,7 +11,16 @@ interface AppLayoutProps {
     children: ReactNode;
 }
 
-export default function AppLayout({ children }: AppLayoutProps) {
+export default async function AppLayout({ children }: AppLayoutProps) {
+    // The proxy only checks that a session cookie is present, which is all a
+    // proxy should do. This is where the session is actually verified, so
+    // every page below here can assume a real signed-in person.
+    const session = await auth.api.getSession({ headers: await headers() });
+
+    if (!session?.user) {
+        redirect("/sign-in");
+    }
+
     return (
         <SidebarProvider
             defaultOpen
@@ -18,7 +30,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 } as React.CSSProperties
             }
         >
-            <AppSidebar />
+            <AppSidebar user={session.user} />
 
             {/* SidebarInset ships as `w-full flex-1`, which floors its
                 automatic minimum width at the full viewport - so it renders

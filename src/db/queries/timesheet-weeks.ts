@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { timesheetWeeks } from "@/db/schema";
@@ -10,27 +10,34 @@ export type TimesheetWeekRow = typeof timesheetWeeks.$inferSelect;
  * no row. Callers get a consistent shape either way.
  */
 export async function findTimesheetWeek(
+    userId: string,
     weekStart: string,
 ): Promise<TimesheetWeekRow | null> {
     const rows = await db
         .select()
         .from(timesheetWeeks)
-        .where(eq(timesheetWeeks.weekStart, weekStart))
+        .where(
+            and(
+                eq(timesheetWeeks.userId, userId),
+                eq(timesheetWeeks.weekStart, weekStart),
+            ),
+        )
         .limit(1);
 
     return rows[0] ?? null;
 }
 
 export async function upsertTimesheetWeek(
+    userId: string,
     weekStart: string,
     weekEnd: string,
     patch: { completedAt?: Date | null; targetMinutes?: number },
 ): Promise<TimesheetWeekRow> {
     const [row] = await db
         .insert(timesheetWeeks)
-        .values({ weekStart, weekEnd, ...patch })
+        .values({ userId, weekStart, weekEnd, ...patch })
         .onConflictDoUpdate({
-            target: timesheetWeeks.weekStart,
+            target: [timesheetWeeks.userId, timesheetWeeks.weekStart],
             set: { weekEnd, ...patch },
         })
         .returning();

@@ -72,7 +72,7 @@ export function registerImportMutations(builder: AppBuilder, refs: Refs) {
                 createMissingProjects: t.arg.boolean({ defaultValue: true }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 const rows = args.rows;
 
                 if (rows.length === 0) {
@@ -88,7 +88,8 @@ export function registerImportMutations(builder: AppBuilder, refs: Refs) {
                 const existingProjects = await db
                     .select({ project: projects, client: clients })
                     .from(projects)
-                    .innerJoin(clients, eq(projects.clientId, clients.id));
+                    .innerJoin(clients, eq(projects.clientId, clients.id))
+                    .where(eq(projects.userId, ctx.userId));
 
                 const projectByName = new Map(
                     existingProjects.map(({ project }) => [
@@ -97,7 +98,10 @@ export function registerImportMutations(builder: AppBuilder, refs: Refs) {
                     ]),
                 );
 
-                const existingClients = await db.select().from(clients);
+                const existingClients = await db
+                    .select()
+                    .from(clients)
+                    .where(eq(clients.userId, ctx.userId));
 
                 // Toggl project names carry the short name ("Gardner"), while
                 // the client is stored in full ("Gardner Inc."), so both have
@@ -145,6 +149,7 @@ export function registerImportMutations(builder: AppBuilder, refs: Refs) {
                             const [created] = await db
                                 .insert(clients)
                                 .values({
+                                    userId: ctx.userId,
                                     name: clientName,
                                     shortName: clientName,
                                 })
@@ -164,6 +169,7 @@ export function registerImportMutations(builder: AppBuilder, refs: Refs) {
                         const [createdProject] = await db
                             .insert(projects)
                             .values({
+                                userId: ctx.userId,
                                 clientId: client.id,
                                 name,
                                 color,
@@ -190,6 +196,7 @@ export function registerImportMutations(builder: AppBuilder, refs: Refs) {
                     .from(timeEntries)
                     .where(
                         and(
+                            eq(timeEntries.userId, ctx.userId),
                             gte(timeEntries.startedAt, from),
                             lte(timeEntries.startedAt, to),
                         ),
@@ -259,6 +266,7 @@ export function registerImportMutations(builder: AppBuilder, refs: Refs) {
                     );
 
                     pending.push({
+                        userId: ctx.userId,
                         projectId: project.id,
                         description,
                         ticketNumber,

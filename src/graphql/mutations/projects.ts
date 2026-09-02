@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { GraphQLError } from "graphql";
 
 import { db } from "@/db";
@@ -9,8 +9,11 @@ import type { AppBuilder } from "../builder";
 import type { Refs } from "../refs";
 import type { ProjectModel } from "../types/project";
 
-async function loadOrThrow(id: string): Promise<ProjectModel> {
-    const project = await findProjectById(id);
+async function loadOrThrow(
+    userId: string,
+    id: string,
+): Promise<ProjectModel> {
+    const project = await findProjectById(userId, id);
 
     if (!project) {
         throw new GraphQLError(`No project with id ${id}`);
@@ -71,7 +74,7 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
                 input: t.arg({ type: CreateClientInput, required: true }),
             },
 
-            resolve: async (_parent, { input }) => {
+            resolve: async (_parent, { input }, ctx) => {
                 const name = input.name.trim();
 
                 if (!name) {
@@ -82,6 +85,7 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
                     const [created] = await db
                         .insert(clients)
                         .values({
+                            userId: ctx.userId,
                             name,
                             shortName: input.shortName?.trim() || null,
                             color: input.color?.trim() || null,
@@ -105,7 +109,7 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
                 input: t.arg({ type: CreateProjectInput, required: true }),
             },
 
-            resolve: async (_parent, { input }) => {
+            resolve: async (_parent, { input }, ctx) => {
                 const name = input.name.trim();
 
                 if (!name) {
@@ -116,6 +120,7 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
                     const [created] = await db
                         .insert(projects)
                         .values({
+                            userId: ctx.userId,
                             clientId: String(input.clientId),
                             name,
                             color: input.color?.trim() || null,
@@ -125,7 +130,7 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
                         })
                         .returning({ id: projects.id });
 
-                    return loadOrThrow(created.id);
+                    return loadOrThrow(ctx.userId, created.id);
                 } catch (error) {
                     rethrowDuplicate(
                         error,
@@ -143,11 +148,11 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
                 input: t.arg({ type: UpdateProjectInput, required: true }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 const id = String(args.id);
                 const { input } = args;
 
-                await loadOrThrow(id);
+                await loadOrThrow(ctx.userId, id);
 
                 try {
                     await db
@@ -178,7 +183,12 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
                                 archived: input.archived,
                             }),
                         })
-                        .where(eq(projects.id, id));
+                        .where(
+                            and(
+                                eq(projects.userId, ctx.userId),
+                                eq(projects.id, id),
+                            ),
+                        );
                 } catch (error) {
                     rethrowDuplicate(
                         error,
@@ -186,7 +196,7 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
                     );
                 }
 
-                return loadOrThrow(id);
+                return loadOrThrow(ctx.userId, id);
             },
         }),
 
@@ -199,9 +209,9 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
                 id: t.arg.id({ required: true }),
             },
 
-            resolve: async (_parent, args) => {
+            resolve: async (_parent, args, ctx) => {
                 const id = String(args.id);
-                const entryCount = await countProjectEntries(id);
+                const entryCount = await countProjectEntries(ctx.userId, id);
 
                 if (entryCount > 0) {
                     throw new GraphQLError(
@@ -213,7 +223,12 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
 
                 const deleted = await db
                     .delete(projects)
-                    .where(eq(projects.id, id))
+                    .where(
+                        and(
+                            eq(projects.userId, ctx.userId),
+                            eq(projects.id, id),
+                        ),
+                    )
                     .returning({ id: projects.id });
 
                 return deleted.length > 0;

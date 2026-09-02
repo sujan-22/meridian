@@ -24,7 +24,9 @@ export interface TicketSummaryRow {
  * Tickets are discovered from the entries rather than maintained separately -
  * you never create a ticket here, you just tell it what was quoted.
  */
-export async function findTicketSummaries(): Promise<TicketSummaryRow[]> {
+export async function findTicketSummaries(
+    userId: string,
+): Promise<TicketSummaryRow[]> {
     const rows = await db
         .select({
             project: projects,
@@ -59,7 +61,12 @@ export async function findTicketSummaries(): Promise<TicketSummaryRow[]> {
                 eq(ticketEstimates.ticketNumber, timeEntries.ticketNumber),
             ),
         )
-        .where(isNotNull(timeEntries.ticketNumber))
+        .where(
+            and(
+                eq(timeEntries.userId, userId),
+                isNotNull(timeEntries.ticketNumber),
+            ),
+        )
         .groupBy(projects.id, clients.id, timeEntries.ticketNumber, ticketEstimates.id)
         .orderBy(asc(clients.name), asc(projects.name), asc(timeEntries.ticketNumber));
 
@@ -77,6 +84,7 @@ export async function findTicketSummaries(): Promise<TicketSummaryRow[]> {
 }
 
 export async function upsertTicketEstimate(input: {
+    userId: string;
     projectId: string;
     ticketNumber: string;
     minMinutes: number | null;
@@ -100,6 +108,7 @@ export async function upsertTicketEstimate(input: {
 }
 
 export async function deleteTicketEstimate(
+    userId: string,
     projectId: string,
     ticketNumber: string,
 ): Promise<boolean> {
@@ -107,6 +116,7 @@ export async function deleteTicketEstimate(
         .delete(ticketEstimates)
         .where(
             and(
+                eq(ticketEstimates.userId, userId),
                 eq(ticketEstimates.projectId, projectId),
                 eq(ticketEstimates.ticketNumber, ticketNumber),
             ),
