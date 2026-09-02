@@ -1,4 +1,5 @@
 import { createBuilder } from "./builder";
+import { registerAccessMutations } from "./mutations/access";
 import { registerCalendarMutations } from "./mutations/calendar";
 import { registerImportMutations } from "./mutations/import";
 import { registerPreferencesMutations } from "./mutations/preferences";
@@ -6,6 +7,7 @@ import { registerProjectMutations } from "./mutations/projects";
 import { registerTimeEntryMutations } from "./mutations/time-entries";
 import { registerTicketMutations } from "./mutations/tickets";
 import { registerTimesheetMutations } from "./mutations/timesheet";
+import { registerAccessQueries } from "./queries/access";
 import { registerCalendarQueries } from "./queries/calendar";
 import { registerCatalogQueries } from "./queries/catalog";
 import { registerTimeEntryQueries } from "./queries/time-entries";
@@ -21,6 +23,7 @@ function buildSchema() {
 
     registerCatalogQueries(builder, refs);
     registerCalendarQueries(builder, refs);
+    registerAccessQueries(builder, refs);
     registerTimeEntryQueries(builder, refs);
     registerPreferencesMutations(builder, refs);
     registerProjectMutations(builder, refs);
@@ -29,6 +32,7 @@ function buildSchema() {
     registerTicketMutations(builder, refs);
     registerImportMutations(builder, refs);
     registerCalendarMutations(builder, refs);
+    registerAccessMutations(builder, refs);
 
     return builder.toSchema();
 }

@@ -1,0 +1,19 @@
+query AllowedAccounts {
+    allowedAccounts {
+        email
+        note
+        createdAt
+    }
+}
+
+mutation AllowAccount($email: String!, $note: String) {
+    allowAccount(email: $email, note: $note) {
+        email
+        note
+        createdAt
+    }
+}
+
+mutation RevokeAccount($email: String!) {
+    revokeAccount(email: $email)
+}

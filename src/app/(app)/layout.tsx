@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
 import { auth } from "@/lib/auth";
+import { isAllowed } from "@/lib/auth/allowlist";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -19,6 +20,13 @@ export default async function AppLayout({ children }: AppLayoutProps) {
 
     if (!session?.user) {
         redirect("/sign-in");
+    }
+
+    // Signing in with Google proves who someone is, not that they are wanted
+    // here. The allowlist is the gate that actually protects the data - the
+    // access code only decides who reaches the sign-in page.
+    if (!(await isAllowed(session.user.email))) {
+        redirect("/not-allowed");
     }
 
     return (

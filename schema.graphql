@@ -1,3 +1,10 @@
+type AllowedAccount {
+  addedBy: String
+  createdAt: DateTime!
+  email: String!
+  note: String
+}
+
 enum BillingType {
   BILLABLE
   NON_BILLABLE
@@ -100,6 +107,7 @@ input ImportTimeEntryInput {
 }
 
 type Mutation {
+  allowAccount(email: String!, note: String): AllowedAccount!
   clearTicketEstimate(projectId: ID!, ticketNumber: String!): TicketSummary!
   completeTimesheetWeek(weekEnd: Date!, weekStart: Date!): TimesheetWeek!
   createClient(input: CreateClientInput!): Client!
@@ -112,6 +120,7 @@ type Mutation {
   markTimeEntriesTransferred(ids: [ID!]!, portion: EntryPortion, transferred: Boolean!): [TimeEntry!]!
   promoteCalendarEvent(id: ID!, projectId: ID): TimeEntry!
   reopenTimesheetWeek(weekEnd: Date!, weekStart: Date!): TimesheetWeek!
+  revokeAccount(email: String!): Boolean!
   setTicketEstimate(input: SetTicketEstimateInput!): TicketSummary!
   startTimer(input: StartTimerInput!): TimeEntry!
   stopTimer(endedAt: DateTime, id: ID!): TimeEntry!
@@ -152,6 +161,7 @@ type ProjectSummary {
 
 type Query {
   activeTimer: TimeEntry
+  allowedAccounts: [AllowedAccount!]!
   calendarEvents(from: DateTime!, to: DateTime!): [CalendarEvent!]!
   calendarStatus: CalendarStatus!
   clients(includeArchived: Boolean = false): [Client!]!

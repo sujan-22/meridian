@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 
 import { schema } from "@/graphql/schema";
 import { auth } from "@/lib/auth";
+import { isAllowed } from "@/lib/auth/allowlist";
 
 interface NextContext {
     params: Promise<Record<string, string>>;
@@ -31,6 +32,12 @@ const { handleRequest } = createYoga<NextContext>({
 
         if (!session?.user) {
             throw new Error("Not signed in");
+        }
+
+        // Enforced here as well as in the layout: a page redirect protects
+        // pages, and this is not a page.
+        if (!(await isAllowed(session.user.email))) {
+            throw new Error("Not allowed");
         }
 
         return { userId: session.user.id };
