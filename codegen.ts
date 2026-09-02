@@ -1,7 +1,12 @@
 import type { CodegenConfig } from "@graphql-codegen/cli";
 
+/**
+ * The schema comes from a file that `pnpm schema` prints, not from a running
+ * server: /api/graphql now requires a session, so an unauthenticated fetch
+ * gets the sign-in page instead of a schema.
+ */
 const config: CodegenConfig = {
-    schema: "http://localhost:3000/api/graphql",
+    schema: "schema.graphql",
 
     documents: ["src/operations/**/*.graphql"],
 

@@ -4,31 +4,17 @@ import { useMutation } from "@apollo/client/react";
 
 import { toast } from "@/components/ui/toast";
 import {
-    ActiveTimerDocument,
     CreateTimeEntryDocument,
     DeleteTimeEntryDocument,
     EntriesDocument,
-    RecentEntriesDocument,
-    StartTimerDocument,
-    StopTimerDocument,
     UpdateTimeEntryDocument,
     type CreateTimeEntryInput,
-    type StartTimerInput,
     type UpdateTimeEntryInput,
 } from "@/gql/graphql";
 
-/**
- * Every mutation changes what "today" looks like, so the day list, the active
- * timer and the recent-work strip are all refreshed together.
- */
-const refetchQueries = [
-    ActiveTimerDocument,
-    EntriesDocument,
-    RecentEntriesDocument,
-];
-
+/** Every mutation changes what the week looks like, so the week reloads. */
 const mutationOptions = {
-    refetchQueries,
+    refetchQueries: [EntriesDocument],
     awaitRefetchQueries: true,
 };
 
@@ -44,16 +30,6 @@ function reportFailure(action: string, error: unknown) {
 }
 
 export function useEntryActions() {
-    const [startTimerMutation, startState] = useMutation(
-        StartTimerDocument,
-        mutationOptions,
-    );
-
-    const [stopTimerMutation, stopState] = useMutation(
-        StopTimerDocument,
-        mutationOptions,
-    );
-
     const [createEntryMutation, createState] = useMutation(
         CreateTimeEntryDocument,
         mutationOptions,
@@ -71,35 +47,7 @@ export function useEntryActions() {
 
     return {
         pending:
-            startState.loading ||
-            stopState.loading ||
-            createState.loading ||
-            updateState.loading ||
-            deleteState.loading,
-
-        startTimer: async (input: StartTimerInput) => {
-            try {
-                await startTimerMutation({ variables: { input } });
-
-                return true;
-            } catch (error) {
-                reportFailure("start the timer", error);
-
-                return false;
-            }
-        },
-
-        stopTimer: async (id: string) => {
-            try {
-                await stopTimerMutation({ variables: { id } });
-
-                return true;
-            } catch (error) {
-                reportFailure("stop the timer", error);
-
-                return false;
-            }
-        },
+            createState.loading || updateState.loading || deleteState.loading,
 
         createEntry: async (input: CreateTimeEntryInput) => {
             try {

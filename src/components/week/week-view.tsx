@@ -80,7 +80,7 @@ export function WeekView() {
         skip: !range,
     });
 
-    const { updateEntry, deleteEntry, startTimer } = useEntryActions();
+    const { updateEntry, deleteEntry } = useEntryActions();
 
     const projects = projectsQuery.data?.projects ?? [];
     const entries = entriesQuery.data?.entries ?? [];
@@ -293,14 +293,6 @@ export function WeekView() {
                         dayEndHour={preferences.dayEndHour}
                         onEditEntry={openEntry}
                         onDuplicateEntry={duplicateEntry}
-                        onContinueEntry={(entry) =>
-                            void startTimer({
-                                projectId: entry.project.id,
-                                description: entry.description,
-                                ticketNumber: entry.ticketNumber,
-                                kind: entry.kind,
-                            })
-                        }
                         onDeleteEntry={(entry) => void deleteEntry(entry.id)}
                         onSelectSlot={openSlot}
                         onSelectRange={openRange}

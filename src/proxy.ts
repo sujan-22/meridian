@@ -42,7 +42,7 @@ export function proxy(request: NextRequest) {
             const next = request.nextUrl.searchParams.get("next");
 
             return NextResponse.redirect(
-                new URL(isSafeNext(next) ? next : "/today", request.url),
+                new URL(isSafeNext(next) ? next : "/week", request.url),
             );
         }
 

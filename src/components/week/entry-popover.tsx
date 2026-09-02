@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Copy, Pencil, Play, Trash2, Users } from "lucide-react";
+import { Copy, Pencil, Trash2, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { TimeEntryFieldsFragment } from "@/gql/graphql";
@@ -21,7 +21,6 @@ interface EntryPopoverProps {
     onClose: () => void;
     onEdit: (entry: TimeEntryFieldsFragment) => void;
     onDuplicate: (entry: TimeEntryFieldsFragment) => void;
-    onContinue: (entry: TimeEntryFieldsFragment) => void;
     onDelete: (entry: TimeEntryFieldsFragment) => void;
 }
 
@@ -36,7 +35,6 @@ export function EntryPopover({
     onClose,
     onEdit,
     onDuplicate,
-    onContinue,
     onDelete,
 }: EntryPopoverProps) {
     const ref = useRef<HTMLDivElement>(null);
@@ -140,18 +138,6 @@ export function EntryPopover({
                 >
                     <Copy className="size-3.5" />
                     Duplicate
-                </Button>
-
-                <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={entry.isRunning}
-                    onClick={() => onContinue(entry)}
-                    className="gap-1.5"
-                >
-                    <Play className="size-3.5" />
-                    Continue
                 </Button>
 
                 <Button

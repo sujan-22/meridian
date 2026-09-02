@@ -27,7 +27,7 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
     const destination =
         next && next.startsWith("/") && !next.startsWith("//")
             ? next
-            : "/today";
+            : "/week";
 
     return (
         <div className="rounded-xl border bg-card p-8 shadow-sm">
