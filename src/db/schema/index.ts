@@ -1,4 +1,5 @@
 export * from "./auth";
+export * from "./calendar-events";
 export * from "./clients";
 export * from "./enums";
 export * from "./preferences";

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { addMinutes, format, isWeekend, startOfDay } from "date-fns";
-import { Users } from "lucide-react";
+import { Calendar, Check, Plus, Users, X } from "lucide-react";
 
 import { useMinute } from "@/hooks/use-clock";
 import {
@@ -16,7 +16,10 @@ import {
 } from "@/components/week/use-entry-drag";
 import { BillableSplit } from "@/components/timer/billable-split";
 import { EntryHoverCard } from "@/components/timer/entry-hover-card";
-import type { TimeEntryFieldsFragment } from "@/gql/graphql";
+import type {
+    CalendarEventFieldsFragment,
+    TimeEntryFieldsFragment,
+} from "@/gql/graphql";
 import { layoutDay, type LayoutInput } from "@/lib/calendar-layout";
 import {
     entryBilledMinutes,
@@ -43,8 +46,25 @@ export const AXIS_WIDTH = "3.25rem";
 const MINUTES_PER_DAY = 24 * 60;
 const POPOVER_WIDTH = 288;
 
+/**
+ * Share of a day column given over to calendar meetings when there are any.
+ * A day with none keeps its full width for tracked time.
+ */
+const MEETING_LANE = 0.34;
+
+/** Minutes since midnight, in the viewer's own timezone. */
+function minuteOfDay(date: Date): number {
+    return date.getHours() * 60 + date.getMinutes();
+}
+
 interface WeekCalendarProps {
     days: readonly Date[];
+    /** What a working day is expected to hold, for the shortfall readout. */
+    dailyTargetMinutes: number;
+    /** Google Calendar meetings, keyed the same way as the entries. */
+    eventsByDay: ReadonlyMap<string, CalendarEventFieldsFragment[]>;
+    onPromoteEvent: (event: CalendarEventFieldsFragment) => void;
+    onDismissEvent: (event: CalendarEventFieldsFragment) => void;
     entriesByDay: ReadonlyMap<string, TimeEntryFieldsFragment[]>;
     hourHeight: number;
     /** Gridline spacing in minutes: 60, 30 or 15 depending on zoom. */
@@ -74,6 +94,10 @@ interface Placement extends LayoutInput {
 export function WeekCalendar({
     days,
     entriesByDay,
+    eventsByDay,
+    onPromoteEvent,
+    onDismissEvent,
+    dailyTargetMinutes,
     hourHeight,
     tickMinutes,
     today,
@@ -207,6 +231,7 @@ export function WeekCalendar({
                                 key={day.toISOString()}
                                 day={day}
                                 today={today}
+                                dailyTargetMinutes={dailyTargetMinutes}
                                 entries={entriesByDay.get(day.toDateString())}
                             />
                         ))}
@@ -251,6 +276,11 @@ export function WeekCalendar({
                                 placements={applied.filter(
                                     (item) => item.dayIndex === dayIndex,
                                 )}
+                                events={
+                                    eventsByDay.get(day.toDateString()) ?? []
+                                }
+                                onPromoteEvent={onPromoteEvent}
+                                onDismissEvent={onDismissEvent}
                                 draggingId={preview?.entryId ?? null}
                                 ticks={ticks}
                                 startHour={startHour}
@@ -290,19 +320,142 @@ export function WeekCalendar({
     );
 }
 
+interface MeetingBlockProps {
+    event: CalendarEventFieldsFragment;
+    top: number;
+    height: number;
+    left: number;
+    width: number;
+    onPromote: (event: CalendarEventFieldsFragment) => void;
+    onDismiss: (event: CalendarEventFieldsFragment) => void;
+}
+
+/**
+ * A meeting read from Google, drawn as an outline rather than a solid block:
+ * it is not tracked time yet, and should not read as though it were. Clicking
+ * it accepts it into the day.
+ */
+function MeetingBlock({
+    event,
+    top,
+    height,
+    left,
+    width,
+    onPromote,
+    onDismiss,
+}: MeetingBlockProps) {
+    const start = new Date(event.startsAt);
+    const end = new Date(event.endsAt);
+    const minutes = Math.round((end.getTime() - start.getTime()) / 60_000);
+
+    return (
+        <div
+            className="group absolute"
+            style={{
+                top: `${top}px`,
+                height: `${Math.max(height, 14)}px`,
+                left: `${left * 100}%`,
+                width: `${width * 100}%`,
+            }}
+        >
+            <button
+                type="button"
+                onClick={() => onPromote(event)}
+                title={`${event.title} · ${format(start, "HH:mm")}–${format(end, "HH:mm")}\nClick to add to the day`}
+                aria-label={`Add "${event.title}" at ${format(start, "HH:mm")} to the day`}
+                className="flex size-full flex-col items-stretch justify-start overflow-hidden rounded-md border border-dashed border-primary/45 bg-primary/5 px-1.5 py-1 text-left transition-colors hover:border-primary/80 hover:bg-primary/15"
+            >
+                {/* A quarter-hour box has room for one line, and the title
+                    is the part worth reading - the time is already told by
+                    where the block sits. */}
+                {minutes < QUARTER_MINUTES * 2 ? (
+                    <span className="flex items-center gap-1 text-[0.6875rem] text-foreground/80">
+                        <Calendar className="size-2.5 shrink-0 text-primary/80" />
+
+                        <span className="truncate">{event.title}</span>
+                    </span>
+                ) : (
+                    <>
+                        <span className="flex items-center gap-1 text-[0.625rem] text-primary/80">
+                            <Calendar className="size-2.5 shrink-0" />
+
+                            <span className="truncate font-mono tabular-nums">
+                                {format(start, "HH:mm")}
+                            </span>
+                        </span>
+
+                        <span className="mt-0.5 line-clamp-4 text-[0.6875rem] leading-tight text-foreground/80">
+                            {event.title}
+                        </span>
+                    </>
+                )}
+            </button>
+
+            {/* Both actions stay out of the way until the block is hovered. */}
+            <span className="pointer-events-none absolute right-0.5 top-0.5 flex gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
+                <button
+                    type="button"
+                    aria-label={`Add "${event.title}" to the day`}
+                    onClick={() => onPromote(event)}
+                    className="flex size-4 items-center justify-center rounded bg-primary text-primary-foreground"
+                >
+                    <Plus className="size-3" />
+                </button>
+
+                <button
+                    type="button"
+                    aria-label={`Hide "${event.title}"`}
+                    onClick={() => onDismiss(event)}
+                    className="flex size-4 items-center justify-center rounded bg-muted text-muted-foreground hover:text-foreground"
+                >
+                    <X className="size-3" />
+                </button>
+            </span>
+        </div>
+    );
+}
+
 interface DayHeadingProps {
+    dailyTargetMinutes: number;
     day: Date;
     today: Date;
     entries?: readonly TimeEntryFieldsFragment[];
 }
 
-function DayHeading({ day, today, entries }: DayHeadingProps) {
+/**
+ * How far a day is from what it should hold.
+ *
+ * Days that have not happened yet are not short of anything, and a weekend is
+ * not expected to hold work at all.
+ */
+function dayShortfall(
+    day: Date,
+    today: Date,
+    minutes: number,
+    dailyTargetMinutes: number,
+): number {
+    if (day > today || isWeekend(day)) {
+        return 0;
+    }
+
+    return Math.max(0, dailyTargetMinutes - minutes);
+}
+
+function DayHeading({
+    day,
+    today,
+    dailyTargetMinutes,
+    entries,
+}: DayHeadingProps) {
     const isToday = day.toDateString() === today.toDateString();
 
     const minutes = (entries ?? []).reduce(
         (total, entry) => total + entryBilledMinutes(entry),
         0,
     );
+
+    const shortfall = dayShortfall(day, today, minutes, dailyTargetMinutes);
+    const complete = !isWeekend(day) && minutes >= dailyTargetMinutes;
 
     return (
         <div
@@ -320,9 +473,21 @@ function DayHeading({ day, today, entries }: DayHeadingProps) {
                 {format(day, "EEE d")}
             </span>
 
+            {/* The day is short: say by how much, right where the total is. */}
+            {shortfall > 0 && (
+                <span className="ml-auto font-mono text-[0.625rem] tabular-nums text-amber-400">
+                    −{formatMinutesAsHours(shortfall)}
+                </span>
+            )}
+
+            {complete && (
+                <Check className="ml-auto size-3 shrink-0 self-center text-emerald-500" />
+            )}
+
             <span
                 className={cn(
-                    "ml-auto font-mono text-xs tabular-nums",
+                    "font-mono text-xs tabular-nums",
+                    shortfall > 0 || complete ? "" : "ml-auto",
                     minutes === 0
                         ? "text-muted-foreground/50"
                         : "text-muted-foreground",
@@ -338,6 +503,9 @@ interface DayColumnProps {
     day: Date;
     dayIndex: number;
     placements: Placement[];
+    events: readonly CalendarEventFieldsFragment[];
+    onPromoteEvent: (event: CalendarEventFieldsFragment) => void;
+    onDismissEvent: (event: CalendarEventFieldsFragment) => void;
     draggingId: string | null;
     ticks: Tick[];
     startHour: number;
@@ -367,6 +535,9 @@ function DayColumn({
     day,
     dayIndex,
     placements,
+    events,
+    onPromoteEvent,
+    onDismissEvent,
     draggingId,
     ticks,
     startHour,
@@ -382,6 +553,25 @@ function DayColumn({
 }: DayColumnProps) {
     const isToday = day.toDateString() === today.toDateString();
     const positioned = layoutDay(placements);
+
+    /**
+     * Meetings not yet accepted. Promoted ones are already drawn as entries in
+     * the primary lane, so leaving them here too would show the same hour
+     * twice.
+     */
+    const pending = events.filter((event) => !event.isPromoted);
+
+    const meetingPlacements = pending.map((event) => ({
+        id: event.id,
+        event,
+        startMinute: minuteOfDay(new Date(event.startsAt)),
+        endMinute: minuteOfDay(new Date(event.endsAt)),
+    }));
+
+    const meetings = layoutDay(meetingPlacements);
+
+    // The lane only takes space when it has something to show.
+    const trackWidth = pending.length > 0 ? 1 - MEETING_LANE : 1;
 
     const minutesFromTop = (minute: number) =>
         ((minute - startHour * 60) / 60) * hourHeight;
@@ -520,10 +710,25 @@ function DayColumn({
                     height={
                         ((item.endMinute - item.startMinute) / 60) * hourHeight
                     }
-                    left={left}
-                    width={width}
+                    left={left * trackWidth}
+                    width={width * trackWidth}
                     dragging={draggingId === item.entry.id}
                     onBeginDrag={onBeginDrag}
+                />
+            ))}
+
+            {meetings.map(({ item, left, width }) => (
+                <MeetingBlock
+                    key={item.id}
+                    event={item.event}
+                    top={minutesFromTop(item.startMinute)}
+                    height={
+                        ((item.endMinute - item.startMinute) / 60) * hourHeight
+                    }
+                    left={trackWidth + left * MEETING_LANE}
+                    width={width * MEETING_LANE}
+                    onPromote={onPromoteEvent}
+                    onDismiss={onDismissEvent}
                 />
             ))}
 

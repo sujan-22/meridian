@@ -37,6 +37,17 @@ export const auth = betterAuth({
         google: {
             clientId: required("GOOGLE_CLIENT_ID"),
             clientSecret: required("GOOGLE_CLIENT_SECRET"),
+
+            // Read-only calendar, so meetings can be pulled into the week.
+            // Asked for at sign-in rather than behind a second consent screen:
+            // one prompt is kinder than two, and Google shows exactly what is
+            // being granted either way.
+            scope: ["https://www.googleapis.com/auth/calendar.readonly"],
+
+            // Without both of these Google issues no refresh token, and the
+            // calendar stops syncing an hour after signing in.
+            accessType: "offline",
+            prompt: "consent",
         },
     },
 
