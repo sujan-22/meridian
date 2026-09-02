@@ -80,7 +80,7 @@ export function registerCalendarMutations(builder: AppBuilder, refs: Refs) {
                     // honouring, which is the same situation by another route.
                     if (
                         error instanceof GoogleCalendarError &&
-                        error.status === 401
+                        (error.status === 401 || error.insufficientScope)
                     ) {
                         await markReauthRequired(ctx.userId);
 
@@ -181,14 +181,14 @@ export function registerCalendarMutations(builder: AppBuilder, refs: Refs) {
                           }),
                 });
 
-                const { hasCalendarScope } = await import("@/lib/google-token");
+                const { hasGoogleAccount } = await import("@/lib/google-token");
 
                 return {
                     connected: true,
                     lastSyncedAt: connection.lastSyncedAt,
                     autoPromote: connection.autoPromote,
                     defaultProjectId: connection.defaultProjectId,
-                    hasCalendarScope: await hasCalendarScope(ctx.userId),
+                    googleLinked: await hasGoogleAccount(ctx.userId),
                     needsReconnect: connection.reauthRequiredAt != null,
                 };
             },

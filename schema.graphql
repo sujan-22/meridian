@@ -15,7 +15,7 @@ type CalendarStatus {
   autoPromote: Boolean!
   connected: Boolean!
   defaultProjectId: ID
-  hasCalendarScope: Boolean!
+  googleLinked: Boolean!
   lastSyncedAt: DateTime
   needsReconnect: Boolean!
 }

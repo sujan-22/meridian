@@ -4,9 +4,6 @@ import { db } from "@/db";
 import { accounts } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
-export const CALENDAR_SCOPE =
-    "https://www.googleapis.com/auth/calendar.readonly";
-
 /** The Google account row for a user, which is where the tokens live. */
 async function googleAccount(userId: string) {
     const rows = await db
@@ -21,16 +18,17 @@ async function googleAccount(userId: string) {
 }
 
 /**
- * Whether the Google grant covers the calendar.
+ * Whether there is a Google account to read a calendar with.
  *
- * Anyone who signed in before the scope was asked for has a perfectly good
- * session and no calendar access; this is what tells them apart so the UI can
- * say "sign in again" rather than showing an empty lane forever.
+ * Deliberately not a check of the stored `scope` string. Google does not
+ * reliably echo the full granted set back in the token response when
+ * incremental authorization is in play, so that column can say "no calendar"
+ * about an account Google's own permissions page says has it. The only honest
+ * test is to call the API, so that is what decides - this just answers
+ * whether there is anything to try with.
  */
-export async function hasCalendarScope(userId: string): Promise<boolean> {
-    const account = await googleAccount(userId);
-
-    return (account?.scope ?? "").includes(CALENDAR_SCOPE);
+export async function hasGoogleAccount(userId: string): Promise<boolean> {
+    return (await googleAccount(userId)) !== null;
 }
 
 /**
@@ -64,13 +62,6 @@ export async function googleAccessToken(userId: string): Promise<string> {
         throw new CalendarAccessError(
             "This account is not linked to Google.",
             "unlinked",
-        );
-    }
-
-    if (!(account.scope ?? "").includes(CALENDAR_SCOPE)) {
-        throw new CalendarAccessError(
-            "Calendar access was never granted. Sign in again to allow it.",
-            "no-scope",
         );
     }
 
