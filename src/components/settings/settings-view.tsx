@@ -1,5 +1,6 @@
 "use client";
 
+import { AccessPanel } from "@/components/settings/access-panel";
 import { CalendarPanel } from "@/components/settings/calendar-panel";
 import { ImportPanel } from "@/components/settings/import-panel";
 import { PreferencesForm } from "@/components/settings/preferences-form";
@@ -38,6 +39,8 @@ export function SettingsView() {
 
                     <div className="flex flex-col gap-4">
                         <CalendarPanel />
+
+                        <AccessPanel />
 
                         <ImportPanel />
                     </div>

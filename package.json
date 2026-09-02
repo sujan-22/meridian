@@ -24,6 +24,7 @@
         "test:serve": "./scripts/test-server.sh --serve",
         "check:isolation": "tsx scripts/check-isolation.ts",
         "check:calendar": "tsx scripts/check-calendar.ts",
+        "check:access": "tsx scripts/check-access.ts",
         "schema": "tsx scripts/print-schema.ts",
         "codegen": "pnpm schema && graphql-codegen --config codegen.ts",
         "codegen:watch": "graphql-codegen --config codegen.ts --watch"

@@ -15,6 +15,9 @@ import { ACCESS_COOKIE, hasValidAccessCookie } from "@/lib/auth/access-code";
  */
 const SIGN_IN = "/sign-in";
 
+/** Reachable once signed in, for someone the allowlist turns away. */
+const NOT_ALLOWED = "/not-allowed";
+
 export function proxy(request: NextRequest) {
     const { pathname, search } = request.nextUrl;
 
@@ -35,6 +38,12 @@ export function proxy(request: NextRequest) {
     }
 
     const signedIn = Boolean(getSessionCookie(request));
+
+    if (pathname === NOT_ALLOWED) {
+        return unlocked && signedIn
+            ? NextResponse.next()
+            : NextResponse.redirect(new URL(SIGN_IN, request.url));
+    }
 
     if (pathname === SIGN_IN) {
         // Nothing left to ask for; send them where they were going.
