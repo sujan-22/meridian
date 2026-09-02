@@ -1,0 +1,1 @@
+ALTER TABLE "calendar_connections" ADD COLUMN "reauth_required_at" timestamp with time zone;

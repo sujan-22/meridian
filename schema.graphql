@@ -17,10 +17,12 @@ type CalendarStatus {
   defaultProjectId: ID
   hasCalendarScope: Boolean!
   lastSyncedAt: DateTime
+  needsReconnect: Boolean!
 }
 
 type CalendarSyncResult {
   autoPromoted: Int!
+  needsReconnect: Boolean!
   removed: Int!
   stored: Int!
 }

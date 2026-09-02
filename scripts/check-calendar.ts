@@ -210,6 +210,18 @@ async function main() {
         `promoted ${count}`,
     );
 
+    // The reconnect flag: set when Google stops renewing access, cleared by
+    // any sync that gets far enough to stamp the connection.
+    await reset();
+    await calendar.markReauthRequired(USER);
+
+    let link = await calendar.findCalendarConnection(USER);
+    check("an expired grant is recorded", link?.reauthRequiredAt != null);
+
+    await calendar.touchCalendarConnection(USER);
+    link = await calendar.findCalendarConnection(USER);
+    check("a successful sync clears it", link?.reauthRequiredAt == null);
+
     await reset();
     await db
         .delete(timeEntries)
