@@ -53,6 +53,7 @@ input CreateProjectInput {
   color: String
   defaultBillingType: BillingType
   name: String!
+  polarisMeetingTask: String
   polarisTask: String
 }
 
@@ -149,6 +150,7 @@ type Project {
   defaultBillingType: BillingType!
   id: ID!
   name: String!
+  polarisMeetingTask: String
   polarisTask: String
 }
 
@@ -253,6 +255,7 @@ input UpdateProjectInput {
   color: String
   defaultBillingType: BillingType
   name: String
+  polarisMeetingTask: String
   polarisTask: String
 }
 

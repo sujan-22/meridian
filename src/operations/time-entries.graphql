@@ -23,6 +23,7 @@ fragment TimeEntryFields on TimeEntry {
         color
         defaultBillingType
         polarisTask
+        polarisMeetingTask
 
         client {
             id

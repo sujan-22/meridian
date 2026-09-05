@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "polaris_meeting_task" text;

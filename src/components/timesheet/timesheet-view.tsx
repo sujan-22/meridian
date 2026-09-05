@@ -2,18 +2,26 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "@apollo/client/react";
-import { addWeeks, format, getISOWeek, isSameMonth } from "date-fns";
+import {
+    addWeeks,
+    eachDayOfInterval,
+    format,
+    getISOWeek,
+    isSameMonth,
+} from "date-fns";
 import {
     Check,
     ChevronLeft,
     ChevronRight,
     CircleDollarSign,
     RotateCcw,
+    TableProperties,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
+import { PolarisGridView } from "@/components/timesheet/polaris-grid";
 import { TimesheetRow } from "@/components/timesheet/timesheet-row";
 import { useToday } from "@/hooks/use-clock";
 import { useCopy } from "@/hooks/use-copy";
@@ -48,6 +56,11 @@ export function TimesheetView() {
 
     const [weekOffset, setWeekOffset] = useState(0);
     const [mode, setMode] = useState<TimesheetMode>("combined");
+
+    /** The Polaris grid is a different question: not "what did I do" but
+        "what goes in each box", so it gets its own view rather than another
+        column on this one. */
+    const [showPolaris, setShowPolaris] = useState(false);
     const [hideEntered, setHideEntered] = useState(false);
 
     const { copiedKey, copy } = useCopy();
@@ -96,11 +109,18 @@ export function TimesheetView() {
     const finished = entries.filter((entry) => entry.endedAt);
 
     const days = buildTimesheet(finished, mode);
+
+    // Every day of the week, present or not - a Polaris row keeps its columns
+    // whether or not anything was tracked in them.
+    const weekDays = range
+        ? eachDayOfInterval({ start: range.from, end: range.to })
+        : [];
     const progress = timesheetProgress(days);
 
     const week = weekQuery.data?.timesheetWeek;
     const everythingEntered =
-        progress.entryCount > 0 && progress.enteredCount === progress.entryCount;
+        progress.entryCount > 0 &&
+        progress.enteredCount === progress.entryCount;
 
     async function toggleEntered(row: Row<TimesheetEntry>, entered: boolean) {
         await markTransferred({
@@ -255,7 +275,25 @@ export function TimesheetView() {
                     <Check className="size-3.5" />
                     Hide entered
                 </Button>
+
+                <Button
+                    type="button"
+                    variant={showPolaris ? "secondary" : "outline"}
+                    size="sm"
+                    aria-pressed={showPolaris}
+                    onClick={() => setShowPolaris((shown) => !shown)}
+                    className="gap-1.5"
+                >
+                    <TableProperties className="size-3.5" />
+                    Polaris grid
+                </Button>
             </div>
+
+            {showPolaris && (
+                <div className="mb-4">
+                    <PolarisGridView entries={entries} days={weekDays} />
+                </div>
+            )}
 
             {entriesQuery.loading && entries.length === 0 ? (
                 <div className="flex flex-col gap-3">

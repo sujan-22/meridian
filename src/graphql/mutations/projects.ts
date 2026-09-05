@@ -9,10 +9,7 @@ import type { AppBuilder } from "../builder";
 import type { Refs } from "../refs";
 import type { ProjectModel } from "../types/project";
 
-async function loadOrThrow(
-    userId: string,
-    id: string,
-): Promise<ProjectModel> {
+async function loadOrThrow(userId: string, id: string): Promise<ProjectModel> {
     const project = await findProjectById(userId, id);
 
     if (!project) {
@@ -52,6 +49,7 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
             color: t.string(),
             defaultBillingType: t.field({ type: refs.BillingType }),
             polarisTask: t.string(),
+            polarisMeetingTask: t.string(),
         }),
     });
 
@@ -62,6 +60,7 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
             color: t.string(),
             defaultBillingType: t.field({ type: refs.BillingType }),
             polarisTask: t.string(),
+            polarisMeetingTask: t.string(),
             archived: t.boolean(),
         }),
     });
@@ -127,6 +126,8 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
                             defaultBillingType:
                                 input.defaultBillingType ?? "non_billable",
                             polarisTask: input.polarisTask?.trim() || null,
+                            polarisMeetingTask:
+                                input.polarisMeetingTask?.trim() || null,
                         })
                         .returning({ id: projects.id });
 
@@ -177,6 +178,8 @@ export function registerProjectMutations(builder: AppBuilder, refs: Refs) {
 
                             ...(input.polarisTask !== undefined && {
                                 polarisTask: input.polarisTask?.trim() || null,
+                                polarisMeetingTask:
+                                    input.polarisMeetingTask?.trim() || null,
                             }),
 
                             ...(input.archived != null && {
