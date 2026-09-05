@@ -657,6 +657,58 @@ async function catalogueChecks() {
             null,
     );
 
+    // A stated label beats anything inferred, even across clients.
+    check(
+        "a recorded task label decides it",
+        matchTasks(
+            {
+                name: "Anything",
+                clientName: "Gardner Inc.",
+                taskLabel: "0220 - Scrum Meetings",
+            },
+            tasks,
+        ).work?.id === "10891",
+    );
+
+    // A meetings bucket belongs to the work task's own project, not merely
+    // to the same client - "Company Forum" was being offered to everything.
+    {
+        const catalogue = [
+            ...tasks,
+            {
+                id: "1847",
+                code: "3110",
+                label: "3110 - Company Forum",
+                projectName: "Evenica Admin",
+                clientName: "Evenica Corp.",
+                programName: null,
+            },
+            {
+                id: "7648",
+                code: "3940",
+                label: "3940 - Evenica - Learning- Internal",
+                projectName: "Evenica Training & Development",
+                clientName: "Evenica Corp.",
+                programName: null,
+            },
+        ];
+
+        const training = matchTasks(
+            {
+                name: "Evenica - Training",
+                clientName: "Evenica Corp.",
+                taskLabel: "3940 - Evenica - Learning- Internal",
+            },
+            catalogue,
+        );
+
+        check(
+            "a meetings task is never borrowed from another project",
+            training.meeting === null,
+            String(training.meeting?.label),
+        );
+    }
+
     // Two tasks for one client is a question, not an answer.
     const twoForEvenica = matchTasks(
         { name: "Evenica - General", clientName: "Evenica Corp." },
