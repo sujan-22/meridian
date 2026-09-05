@@ -35,7 +35,18 @@ export const projects = pgTable(
             .default("non_billable")
             .notNull(),
 
+        /** The Polaris task a work entry on this project is booked to. */
         polarisTask: text("polaris_task"),
+
+        /**
+         * Where meetings go instead.
+         *
+         * Polaris keys a row by task, and the same project books its ceremonies
+         * to a different one - "0200 - Meetings" beside "1500 - Ongoing
+         * Support". One column per project could not say that, so a scrum and
+         * the work it was about collapsed into the same row.
+         */
+        polarisMeetingTask: text("polaris_meeting_task"),
 
         archived: boolean("archived").default(false).notNull(),
 

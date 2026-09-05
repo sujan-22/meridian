@@ -89,6 +89,9 @@ function ProjectForm({ clients, project, onDone }: ProjectFormProps) {
         project?.defaultBillingType ?? "BILLABLE",
     );
     const [polarisTask, setPolarisTask] = useState(project?.polarisTask ?? "");
+    const [polarisMeetingTask, setPolarisMeetingTask] = useState(
+        project?.polarisMeetingTask ?? "",
+    );
 
     const [newClientName, setNewClientName] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -140,6 +143,7 @@ function ProjectForm({ clients, project, onDone }: ProjectFormProps) {
             color,
             defaultBillingType: billingType,
             polarisTask: polarisTask.trim() || null,
+            polarisMeetingTask: polarisMeetingTask.trim() || null,
         };
 
         const saved = project
@@ -294,6 +298,25 @@ function ProjectForm({ clients, project, onDone }: ProjectFormProps) {
                         />
                     </Field>
                 </div>
+
+                <Field label="Polaris task for meetings">
+                    <Input
+                        value={polarisMeetingTask}
+                        onChange={(event) =>
+                            setPolarisMeetingTask(event.target.value)
+                        }
+                        placeholder="0200 - Meetings"
+                        autoComplete="off"
+                        className="h-10"
+                    />
+
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                        Polaris books a scrum to a different task than the work
+                        it was about. Left empty, meetings on this project
+                        cannot be placed rather than being filed under the work
+                        task.
+                    </p>
+                </Field>
 
                 {error && <p className="text-sm text-destructive">{error}</p>}
             </div>

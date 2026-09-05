@@ -37,6 +37,10 @@ export function projectRef(
                 nullable: true,
             }),
 
+            polarisMeetingTask: t.exposeString("polarisMeetingTask", {
+                nullable: true,
+            }),
+
             archived: t.exposeBoolean("archived"),
 
             createdAt: t.field({

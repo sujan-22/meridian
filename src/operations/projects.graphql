@@ -4,6 +4,7 @@ fragment ProjectFields on Project {
     color
     defaultBillingType
     polarisTask
+    polarisMeetingTask
     archived
     createdAt
 
