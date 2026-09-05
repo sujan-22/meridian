@@ -16,7 +16,22 @@ export interface RepliconConfig {
     tenant: string;
     /** Numeric user id, likewise. */
     userId: string;
+    /**
+     * The extension field that holds the ticket number.
+     *
+     * Replicon does not model the ticket as time-entry metadata; it is a
+     * tenant-defined extension field, so its id belongs in configuration
+     * rather than baked in here.
+     */
+    ticketFieldId: string;
+    /**
+     * Rate sent with billable time. Replicon's client omits this key entirely
+     * on non-billable entries, which is why it is applied conditionally.
+     */
+    billingRateUri?: string;
 }
+
+const DEFAULT_BILLING_RATE = "urn:replicon:project-specific-billing-rate";
 
 /** Where a row sits on the Polaris grid, which the payload has to name. */
 export interface RepliconRowPlacement {
@@ -138,6 +153,20 @@ export function buildRepliconPlan(
                         ],
                         entryDate: entryDate(cell.day),
                         customMetadata: [
+                            // Only billable time carries a rate, matching what
+                            // Replicon's own client sends.
+                            ...(row.billing === "Billable"
+                                ? [
+                                      {
+                                          keyUri: "urn:replicon:time-entry-metadata-key:billing-rate",
+                                          value: {
+                                              uri:
+                                                  config.billingRateUri ??
+                                                  DEFAULT_BILLING_RATE,
+                                          },
+                                      },
+                                  ]
+                                : []),
                             {
                                 keyUri: "urn:replicon:time-entry-metadata-key:is-billable",
                                 value: { bool: row.billing === "Billable" },
@@ -160,7 +189,20 @@ export function buildRepliconPlan(
                                 value: { number: placement.rowNumber },
                             },
                         ],
-                        extensionFieldValues: [],
+                        // The ticket is an extension field, not metadata.
+                        extensionFieldValues: row.ticketNumber
+                            ? [
+                                  {
+                                      definition: {
+                                          uri: `urn:replicon-tenant:${config.tenant}:object-extension-tag-definition:${config.ticketFieldId}`,
+                                      },
+                                      numericValue: null,
+                                      textValue: row.ticketNumber,
+                                      tag: null,
+                                      jsonValue: null,
+                                  },
+                              ]
+                            : [],
                     },
                     unitOfWorkId: unitOfWorkId(index),
                 },

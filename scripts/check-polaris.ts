@@ -269,6 +269,12 @@ function metadata(
 }
 
 // --- the requests that would be sent to Replicon ---
+const REPLICON = {
+    tenant: "keyorainc",
+    userId: "2430",
+    ticketFieldId: "700d5f14-ba85-415a-ab1f-fbc940102950",
+};
+
 async function repliconChecks() {
     const { buildRepliconPlan } = await import("../src/lib/replicon");
 
@@ -300,7 +306,7 @@ async function repliconChecks() {
 
     const plan = buildRepliconPlan(
         grid,
-        { tenant: "keyorainc", userId: "2430" },
+        REPLICON,
         placements,
         () => "67768404-9fbc-4a08-904f-2b908b1ee070",
     );
@@ -369,11 +375,7 @@ async function repliconChecks() {
     );
 
     // A row with nowhere to land must be reported, never posted blind.
-    const orphan = buildRepliconPlan(
-        grid,
-        { tenant: "keyorainc", userId: "2430" },
-        new Map(),
-    );
+    const orphan = buildRepliconPlan(grid, REPLICON, new Map());
 
     check(
         "a row with no placement is skipped, not guessed",
@@ -383,7 +385,167 @@ async function repliconChecks() {
     );
 }
 
-repliconChecks().then(() => {
-    console.log(failed ? `\n${failed} FAILED` : "\nthe Polaris mapping holds");
-    process.exit(failed ? 1 : 0);
-});
+/**
+ * Replays the two requests captured from Replicon's own client.
+ *
+ * The builder is given the same inputs and must produce the same body, field
+ * for field. This is the only check that can catch the shape being subtly
+ * wrong - everything else only proves it is self-consistent.
+ */
+async function replayChecks() {
+    const { buildRepliconPlan } = await import("../src/lib/replicon");
+
+    const cases = [
+        {
+            name: "non-billable, with a ticket",
+            hours: 1.75,
+            billing: "Non Billable" as const,
+            ticket: "14227",
+            rowNumber: 11,
+            comment:
+                "Gardner 14227 - Discussion with lead - review updates from Gardner - review MSFT documentation on image optimization - Ecom code changes - Site builder changes as per the instructions - test image loading time",
+            captured: {
+                interval: {
+                    hours: { hours: 1, minutes: 45, seconds: 0 },
+                    timePair: null,
+                },
+                metadata: ["is-billable", "task", "comments", "row-number"],
+                isBillable: false,
+                ticketValue: "14227",
+            },
+        },
+        {
+            name: "billable, with a ticket",
+            hours: 2.75,
+            billing: "Billable" as const,
+            ticket: "14222",
+            rowNumber: 8,
+            comment:
+                "Gardner 14222 - Continue the working session to develop the add to order template functionality - implement template dialogs - implement error handling logic - working session to implement error modal - add stylings - test changes thoroughly.",
+            captured: {
+                interval: {
+                    hours: { hours: 2, minutes: 45, seconds: 0 },
+                    timePair: null,
+                },
+                metadata: [
+                    "billing-rate",
+                    "is-billable",
+                    "task",
+                    "comments",
+                    "row-number",
+                ],
+                isBillable: true,
+                ticketValue: "14222",
+            },
+        },
+    ];
+
+    for (const c of cases) {
+        const row = {
+            key: "k",
+            clientName: "Gardner Inc.",
+            projectName: "Gardner - Ongoing Support",
+            task: "1500 - Ongoing Support",
+            billing: c.billing,
+            ticketNumber: c.ticket,
+            cells: [{ day: "2026-08-31", hours: c.hours, entryIds: ["e"] }],
+            totalHours: c.hours,
+            comment: c.comment,
+            entered: false,
+        };
+
+        const plan = buildRepliconPlan(
+            { rows: [row], unmappable: [], totalHours: c.hours },
+            REPLICON,
+            new Map([["k", { taskId: "10894", rowNumber: c.rowNumber }]]),
+            () => "53def72f-dd8a-42d4-8fef-1ce787b03ad0",
+        );
+
+        const g = revisionGroup(plan.requests[0].body);
+        const keys = g.customMetadata.map((m) => m.keyUri.split(":").pop());
+        const meta = metadata(g);
+        const ext = (
+            g as unknown as {
+                extensionFieldValues: Array<{
+                    definition: { uri: string };
+                    textValue: string | null;
+                }>;
+            }
+        ).extensionFieldValues;
+
+        check(
+            `replay (${c.name}): duration matches the capture`,
+            JSON.stringify(g.interval) === JSON.stringify(c.captured.interval),
+            JSON.stringify(g.interval.hours),
+        );
+        check(
+            `replay (${c.name}): the same metadata keys, in the same order`,
+            JSON.stringify(keys) === JSON.stringify(c.captured.metadata),
+            keys.join(","),
+        );
+        check(
+            `replay (${c.name}): is-billable matches`,
+            meta["is-billable"].bool === c.captured.isBillable,
+        );
+        check(
+            `replay (${c.name}): the ticket is the extension field's textValue`,
+            ext.length === 1 && ext[0].textValue === c.captured.ticketValue,
+            JSON.stringify(ext[0]?.textValue),
+        );
+        check(
+            `replay (${c.name}): the extension definition uri matches`,
+            ext[0]?.definition.uri ===
+                "urn:replicon-tenant:keyorainc:object-extension-tag-definition:700d5f14-ba85-415a-ab1f-fbc940102950",
+        );
+        check(
+            `replay (${c.name}): the comment is sent verbatim`,
+            meta.comments.text === c.comment,
+        );
+    }
+
+    // A row with no ticket sends an empty extension list, as the first
+    // capture did - not a field with a null value.
+    const noTicket = buildRepliconPlan(
+        {
+            rows: [
+                {
+                    key: "k",
+                    clientName: "c",
+                    projectName: "p",
+                    task: "0220 - Scrum Meetings",
+                    billing: "Non Billable" as const,
+                    ticketNumber: null,
+                    cells: [
+                        { day: "2026-08-31", hours: 0.25, entryIds: ["e"] },
+                    ],
+                    totalHours: 0.25,
+                    comment: "CSBN: Self Service Portal Scrum",
+                    entered: false,
+                },
+            ],
+            unmappable: [],
+            totalHours: 0.25,
+        },
+        REPLICON,
+        new Map([["k", { taskId: "14510", rowNumber: 26 }]]),
+    );
+
+    const g = revisionGroup(noTicket.requests[0].body) as unknown as {
+        extensionFieldValues: unknown[];
+    };
+
+    check(
+        "a row with no ticket sends no extension field",
+        g.extensionFieldValues.length === 0,
+        JSON.stringify(g.extensionFieldValues),
+    );
+}
+
+repliconChecks()
+    .then(replayChecks)
+    .then(() => {
+        console.log(
+            failed ? `\n${failed} FAILED` : "\nthe Polaris mapping holds",
+        );
+        process.exit(failed ? 1 : 0);
+    });
