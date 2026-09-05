@@ -541,8 +541,153 @@ async function replayChecks() {
     );
 }
 
+/** The task catalogue, parsed from a real BulkGetProjectOrTaskDetails reply. */
+async function catalogueChecks() {
+    const { parseRepliconTasks, isMeetingTask, matchTasks } =
+        await import("../src/lib/replicon-tasks");
+
+    // Shaped exactly as the service answers, including the `d` wrapper.
+    const payload = {
+        d: [
+            {
+                uri: "urn:replicon-tenant:keyorainc:task:11646",
+                program: { displayText: "Internal Administration" },
+                project: {
+                    code: null,
+                    displayText: "Evenica Customer Care",
+                    uri: "urn:replicon-tenant:keyorainc:project:4130",
+                },
+                taskAncestry: {
+                    parentTask: null,
+                    task: { code: "3850", displayText: "3850 - CC - Testing" },
+                },
+                clientSchedule: [
+                    { clients: [{ client: { displayText: "Evenica Corp." } }] },
+                ],
+            },
+            {
+                uri: "urn:replicon-tenant:keyorainc:task:10891",
+                program: { displayText: "Ongoing Support/Customer Care" },
+                project: {
+                    code: "SOW1286",
+                    displayText: "Gardner - Ongoing Support",
+                },
+                taskAncestry: {
+                    parentTask: null,
+                    task: {
+                        code: "0220",
+                        displayText: "0220 - Scrum Meetings",
+                    },
+                },
+                clientSchedule: [
+                    { clients: [{ client: { displayText: "Gardner Inc." } }] },
+                ],
+            },
+            {
+                uri: "urn:replicon-tenant:keyorainc:task:13029",
+                project: { code: "1329", displayText: "SNDL Ongoing Support" },
+                taskAncestry: { parentTask: null },
+                clientSchedule: [
+                    { clients: [{ client: { displayText: "SNDL Inc." } }] },
+                ],
+            },
+            { notATask: true },
+        ],
+    };
+
+    const tasks = parseRepliconTasks(payload);
+
+    check(
+        "every task in the reply is read",
+        tasks.length === 3,
+        `${tasks.length}`,
+    );
+    check("the id comes off the URN", tasks[0].id === "11646", tasks[0].id);
+    check(
+        "the label is the display text",
+        tasks[0].label === "3850 - CC - Testing",
+    );
+    check("the code is kept separately", tasks[0].code === "3850");
+    check(
+        "the project is read",
+        tasks[0].projectName === "Evenica Customer Care",
+    );
+    check(
+        "the client is dug out of the schedule",
+        tasks[0].clientName === "Evenica Corp.",
+        String(tasks[0].clientName),
+    );
+    check(
+        "a task with no task node falls back to the project",
+        tasks[2].label === "SNDL Ongoing Support",
+        tasks[2].label,
+    );
+    check(
+        "entries that are not tasks are ignored",
+        !tasks.some((t) => t.id === undefined),
+    );
+
+    check(
+        "a scrum task is recognised as a meeting task",
+        isMeetingTask(tasks[1]),
+    );
+    check("a testing task is not", !isMeetingTask(tasks[0]));
+
+    // Matching Meridian projects onto the catalogue.
+    const gardner = matchTasks(
+        { name: "Gardner", clientName: "Gardner Inc." },
+        tasks,
+    );
+
+    check(
+        "the Gardner meeting task is found",
+        gardner.meeting?.id === "10891",
+        String(gardner.meeting?.label),
+    );
+
+    check(
+        "a client spelled differently still matches",
+        matchTasks({ name: "SNDL", clientName: "SNDL" }, tasks).work?.id ===
+            "13029",
+    );
+
+    check(
+        "another client's tasks are never offered",
+        matchTasks({ name: "Whatever", clientName: "Mirage" }, tasks).work ===
+            null,
+    );
+
+    // Two tasks for one client is a question, not an answer.
+    const twoForEvenica = matchTasks(
+        { name: "Evenica - General", clientName: "Evenica Corp." },
+        [
+            ...tasks,
+            {
+                id: "99999",
+                code: "3810",
+                label: "3810 - CC - General Tasks",
+                projectName: "Evenica Customer Care",
+                clientName: "Evenica Corp.",
+                programName: null,
+            },
+        ],
+    );
+
+    check(
+        "an ambiguous client is reported, not guessed",
+        twoForEvenica.work === null && twoForEvenica.ambiguousWork.length === 2,
+        `${twoForEvenica.ambiguousWork.length} candidates`,
+    );
+
+    check(
+        "a garbled payload yields nothing rather than throwing",
+        parseRepliconTasks("not json at all").length === 0,
+    );
+}
+
 repliconChecks()
     .then(replayChecks)
+    .then(catalogueChecks)
     .then(() => {
         console.log(
             failed ? `\n${failed} FAILED` : "\nthe Polaris mapping holds",
