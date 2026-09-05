@@ -156,9 +156,18 @@ export function sameClient(task: RepliconTask, clientName: string): boolean {
     return a === b || a.includes(b) || b.includes(a);
 }
 
-/** Whether a task looks like the one meetings are booked to. */
+/**
+ * Whether a task looks like the one meetings are booked to.
+ *
+ * The plurals are not decoration. `\bmeeting\b` does not match "Meetings" -
+ * the trailing s blocks the word boundary - so "3830 - CC - Internal
+ * Meetings" was not being recognised at all, and the only candidate left for
+ * its client was "3110 - Company Forum".
+ */
 export function isMeetingTask(task: RepliconTask): boolean {
-    return /\b(scrum|meeting|forum|stand-?up)\b/i.test(task.label);
+    return /\b(scrums?|meetings?|forums?|stand-?ups?|syncs?|huddles?)\b/i.test(
+        task.label,
+    );
 }
 
 export interface TaskMatch {
@@ -169,28 +178,62 @@ export interface TaskMatch {
     ambiguousMeeting: RepliconTask[];
 }
 
+export interface MatchableProject {
+    name: string;
+    clientName: string;
+    /** A task label already recorded against this project, if there is one. */
+    taskLabel?: string | null;
+    meetingTaskLabel?: string | null;
+}
+
 /**
  * Suggests the tasks a Meridian project books to.
  *
- * The client narrows the field; the count decides confidence. One work task
- * for a client is an answer, several is a question - and a question is
- * reported rather than resolved by picking the highest-scoring one. An
- * earlier version scored client and project together, and three unrelated
- * Evenica projects all came out mapped to "CC - Testing" because sharing a
- * client was enough to clear the bar.
+ * Evidence in order of strength:
+ *
+ *  1. A task label already recorded against the project. That is somebody
+ *     stating the answer, so it beats anything inferred - narrowed by client
+ *     when the same label exists for several clients, which "1500 - Ongoing
+ *     Support" does.
+ *  2. Otherwise the client narrows the field and the count decides. One task
+ *     for a client is an answer; several is a question.
+ *
+ * A question is reported with its candidates rather than settled by picking a
+ * winner. An earlier version scored client and project similarity together,
+ * and three unrelated Evenica projects all came out mapped to "CC - Testing"
+ * because sharing a client was enough to clear the bar.
  */
 export function matchTasks(
-    project: { name: string; clientName: string },
+    project: MatchableProject,
     tasks: readonly RepliconTask[],
 ): TaskMatch {
     const mine = tasks.filter((task) => sameClient(task, project.clientName));
 
-    const work = mine.filter((task) => !isMeetingTask(task));
-    const meeting = mine.filter((task) => isMeetingTask(task));
+    /** Tasks carrying exactly this label, preferring ones for this client. */
+    const byLabel = (label: string | null | undefined): RepliconTask | null => {
+        const wanted = norm(label ?? "");
+
+        if (!wanted) {
+            return null;
+        }
+
+        const matches = tasks.filter((task) => norm(task.label) === wanted);
+
+        if (matches.length === 1) {
+            return matches[0];
+        }
+
+        const forClient = matches.filter((task) =>
+            sameClient(task, project.clientName),
+        );
+
+        return forClient.length === 1 ? forClient[0] : null;
+    };
 
     /**
-     * With several candidates, an exact project-name match still settles it -
-     * that is a direct statement, not an inference from a shared client.
+     * With several candidates and no stated label, an exact project-name
+     * match still settles it - that is a direct statement, not an inference
+     * from a shared client.
      */
     const decide = (candidates: RepliconTask[]): RepliconTask | null => {
         if (candidates.length === 1) {
@@ -206,8 +249,33 @@ export function matchTasks(
         return exact.length === 1 ? exact[0] : null;
     };
 
-    const chosenWork = decide(work);
-    const chosenMeeting = decide(meeting);
+    const work = mine.filter((task) => !isMeetingTask(task));
+
+    const chosenWork = byLabel(project.taskLabel) ?? decide(work);
+
+    /**
+     * Meetings are looked for inside the work task's own Replicon project,
+     * not merely among the client's tasks.
+     *
+     * Sharing a client is far too weak: Evenica Corp. owns a "3110 - Company
+     * Forum" that reads as a meeting to any keyword test, and it was being
+     * offered as the meetings bucket for unrelated projects. A project's
+     * scrum row lives in that project.
+     */
+    const sameProject = chosenWork
+        ? tasks.filter(
+              (task) =>
+                  task.projectName &&
+                  chosenWork.projectName &&
+                  norm(task.projectName) === norm(chosenWork.projectName),
+          )
+        : mine;
+
+    const meeting = sameProject.filter(
+        (task) => isMeetingTask(task) && task.id !== chosenWork?.id,
+    );
+
+    const chosenMeeting = byLabel(project.meetingTaskLabel) ?? decide(meeting);
 
     return {
         work: chosenWork,

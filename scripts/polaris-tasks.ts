@@ -52,6 +52,8 @@ async function main() {
             clientName: clients.name,
             polarisTaskId: projects.polarisTaskId,
             polarisMeetingTaskId: projects.polarisMeetingTaskId,
+            taskLabel: projects.polarisTask,
+            meetingTaskLabel: projects.polarisMeetingTask,
         })
         .from(projects)
         .innerJoin(clients, eq(clients.id, projects.clientId))
