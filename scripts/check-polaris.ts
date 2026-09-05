@@ -244,6 +244,30 @@ function entry(
     );
 }
 
+/** The shape of a request body, for reading assertions off it. */
+interface RevisionGroup {
+    user: { uri: string };
+    interval: { hours: { hours: number; minutes: number; seconds: number } };
+    entryDate: { year: number; month: number; day: number };
+    customMetadata: Array<{ keyUri: string; value: Record<string, unknown> }>;
+}
+
+function revisionGroup(body: unknown): RevisionGroup {
+    return (body as { timeEntryRevisionGroup: RevisionGroup })
+        .timeEntryRevisionGroup;
+}
+
+function metadata(
+    group: RevisionGroup,
+): Record<string, Record<string, unknown>> {
+    return Object.fromEntries(
+        group.customMetadata.map((m) => [
+            m.keyUri.split(":").pop() as string,
+            m.value,
+        ]),
+    );
+}
+
 // --- the requests that would be sent to Replicon ---
 async function repliconChecks() {
     const { buildRepliconPlan } = await import("../src/lib/replicon");
@@ -290,10 +314,8 @@ async function repliconChecks() {
     const meeting = plan.requests.find((r) =>
         r.summary.includes("2026-08-31"),
     )!;
-    const b = (meeting.body as Record<string, any>).timeEntryRevisionGroup;
-    const meta = Object.fromEntries(
-        b.customMetadata.map((m: any) => [m.keyUri.split(":").pop(), m.value]),
-    );
+    const b = revisionGroup(meeting.body);
+    const meta = metadata(b);
 
     check(
         "duration is sent as h/m/s",
@@ -310,7 +332,7 @@ async function repliconChecks() {
     check(
         "the task is sent as a tenant URN",
         meta.task.uri === "urn:replicon-tenant:keyorainc:task:14510",
-        meta.task.uri,
+        String(meta.task.uri),
     );
     check(
         "a non-billable meeting is flagged not billable",
@@ -319,7 +341,7 @@ async function repliconChecks() {
     check(
         "the comment carries the description",
         meta.comments.text === "CSBN: Self Service Portal Scrum",
-        meta.comments.text,
+        String(meta.comments.text),
     );
     check("the row number is included", meta["row-number"].number === 26);
     check(
@@ -328,10 +350,8 @@ async function repliconChecks() {
     );
 
     const work = plan.requests.find((r) => r.summary.includes("2026-09-01"))!;
-    const wb = (work.body as Record<string, any>).timeEntryRevisionGroup;
-    const wmeta = Object.fromEntries(
-        wb.customMetadata.map((m: any) => [m.keyUri.split(":").pop(), m.value]),
-    );
+    const wb = revisionGroup(work.body);
+    const wmeta = metadata(wb);
 
     check(
         "billable work is flagged billable",
