@@ -244,5 +244,126 @@ function entry(
     );
 }
 
-console.log(failed ? `\n${failed} FAILED` : "\nthe Polaris mapping holds");
-process.exit(failed ? 1 : 0);
+// --- the requests that would be sent to Replicon ---
+async function repliconChecks() {
+    const { buildRepliconPlan } = await import("../src/lib/replicon");
+
+    const grid = buildPolarisGrid([
+        entry({
+            minutes: 15,
+            day: "2026-08-31",
+            kind: "MEETING",
+            description: "CSBN: Self Service Portal Scrum",
+            billingType: "NON_BILLABLE",
+        }),
+        entry({
+            minutes: 285,
+            day: "2026-09-01",
+            ticketNumber: "14222",
+            description: "Gardner 14222 - build",
+        }),
+    ]);
+
+    const placements = new Map(
+        grid.rows.map((row, i) => [
+            row.key,
+            {
+                taskId: row.task.startsWith("0200") ? "14510" : "1500",
+                rowNumber: 26 + i,
+            },
+        ]),
+    );
+
+    const plan = buildRepliconPlan(
+        grid,
+        { tenant: "keyorainc", userId: "2430" },
+        placements,
+        () => "67768404-9fbc-4a08-904f-2b908b1ee070",
+    );
+
+    check(
+        "one request per filled cell",
+        plan.requests.length === 2,
+        `${plan.requests.length}`,
+    );
+
+    const meeting = plan.requests.find((r) =>
+        r.summary.includes("2026-08-31"),
+    )!;
+    const b = (meeting.body as Record<string, any>).timeEntryRevisionGroup;
+    const meta = Object.fromEntries(
+        b.customMetadata.map((m: any) => [m.keyUri.split(":").pop(), m.value]),
+    );
+
+    check(
+        "duration is sent as h/m/s",
+        b.interval.hours.hours === 0 && b.interval.hours.minutes === 15,
+        JSON.stringify(b.interval.hours),
+    );
+    check(
+        "the date is split into y/m/d",
+        b.entryDate.year === 2026 &&
+            b.entryDate.month === 8 &&
+            b.entryDate.day === 31,
+        JSON.stringify(b.entryDate),
+    );
+    check(
+        "the task is sent as a tenant URN",
+        meta.task.uri === "urn:replicon-tenant:keyorainc:task:14510",
+        meta.task.uri,
+    );
+    check(
+        "a non-billable meeting is flagged not billable",
+        meta["is-billable"].bool === false,
+    );
+    check(
+        "the comment carries the description",
+        meta.comments.text === "CSBN: Self Service Portal Scrum",
+        meta.comments.text,
+    );
+    check("the row number is included", meta["row-number"].number === 26);
+    check(
+        "the user is the tenant user URN",
+        b.user.uri === "urn:replicon-tenant:keyorainc:user:2430",
+    );
+
+    const work = plan.requests.find((r) => r.summary.includes("2026-09-01"))!;
+    const wb = (work.body as Record<string, any>).timeEntryRevisionGroup;
+    const wmeta = Object.fromEntries(
+        wb.customMetadata.map((m: any) => [m.keyUri.split(":").pop(), m.value]),
+    );
+
+    check(
+        "billable work is flagged billable",
+        wmeta["is-billable"].bool === true,
+    );
+    check(
+        "4.75 h becomes 4 h 45 m",
+        wb.interval.hours.hours === 4 && wb.interval.hours.minutes === 45,
+        JSON.stringify(wb.interval.hours),
+    );
+    check(
+        "the plan totals what the grid holds",
+        plan.totalHours === grid.totalHours,
+        `${plan.totalHours} vs ${grid.totalHours}`,
+    );
+
+    // A row with nowhere to land must be reported, never posted blind.
+    const orphan = buildRepliconPlan(
+        grid,
+        { tenant: "keyorainc", userId: "2430" },
+        new Map(),
+    );
+
+    check(
+        "a row with no placement is skipped, not guessed",
+        orphan.requests.length === 0 &&
+            orphan.skipped.length === grid.rows.length,
+        `${orphan.skipped.length} skipped`,
+    );
+}
+
+repliconChecks().then(() => {
+    console.log(failed ? `\n${failed} FAILED` : "\nthe Polaris mapping holds");
+    process.exit(failed ? 1 : 0);
+});

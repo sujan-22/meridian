@@ -39,6 +39,13 @@ export const projects = pgTable(
         polarisTask: text("polaris_task"),
 
         /**
+         * Replicon's own id for that task, which is what the API keys on -
+         * `urn:replicon-tenant:<tenant>:task:14510`. The label above is for
+         * reading; this is the part a transfer actually needs.
+         */
+        polarisTaskId: text("polaris_task_id"),
+
+        /**
          * Where meetings go instead.
          *
          * Polaris keys a row by task, and the same project books its ceremonies
@@ -47,6 +54,8 @@ export const projects = pgTable(
          * the work it was about collapsed into the same row.
          */
         polarisMeetingTask: text("polaris_meeting_task"),
+
+        polarisMeetingTaskId: text("polaris_meeting_task_id"),
 
         archived: boolean("archived").default(false).notNull(),
 
