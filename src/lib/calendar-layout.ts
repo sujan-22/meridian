@@ -18,6 +18,17 @@ export interface PositionedBlock<T extends LayoutInput> {
     /** Fractions of the column width, 0-1. */
     left: number;
     width: number;
+    /**
+     * Which run of transitively overlapping blocks this belongs to, and the
+     * minutes that run spans.
+     *
+     * Callers need this to decide anything about a group as a whole - giving
+     * two blocks that sit side by side different widths looks broken, so a
+     * decision has to be taken per cluster rather than per block.
+     */
+    cluster: number;
+    clusterStart: number;
+    clusterEnd: number;
 }
 
 /** Blocks below this are too short to read, so they are drawn taller. */
@@ -36,6 +47,7 @@ export function layoutDay<T extends LayoutInput>(
     // one shares the column count so their widths line up.
     let cluster: T[] = [];
     let clusterEnd = -Infinity;
+    let clusterIndex = 0;
 
     const flush = () => {
         if (cluster.length === 0) {
@@ -63,6 +75,8 @@ export function layoutDay<T extends LayoutInput>(
 
         const columns = columnEnds.length;
 
+        const start = Math.min(...cluster.map((item) => item.startMinute));
+
         for (const item of cluster) {
             const column = columnOf.get(item.id) ?? 0;
 
@@ -70,9 +84,13 @@ export function layoutDay<T extends LayoutInput>(
                 item,
                 left: column / columns,
                 width: 1 / columns,
+                cluster: clusterIndex,
+                clusterStart: start,
+                clusterEnd,
             });
         }
 
+        clusterIndex += 1;
         cluster = [];
         clusterEnd = -Infinity;
     };
