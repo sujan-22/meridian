@@ -210,6 +210,68 @@ async function main() {
         `promoted ${count}`,
     );
 
+    // Deleting a promoted meeting's entry must not hand it straight back.
+    await reset();
+    const conn = await calendar.touchCalendarConnection(USER);
+    const later = new Date(conn.connectedAt.getTime() + 60_000);
+
+    await calendar.syncCalendarWindow(
+        USER,
+        from,
+        new Date(later.getTime() + 86_400_000),
+        [
+            {
+                googleEventId: "declined",
+                calendarId: "primary",
+                title: `${gardner.name} Weekly Synch`,
+                startsAt: later,
+                endsAt: new Date(later.getTime() + 900_000),
+            },
+        ],
+    );
+
+    const settled = new Date(later.getTime() + 1_800_000);
+
+    check(
+        "a finished meeting is offered once",
+        (await calendar.autoPromoteFinished(USER, settled)) === 1,
+    );
+
+    const [promotedRow] = await db
+        .select()
+        .from(calendarEvents)
+        .where(eq(calendarEvents.userId, USER));
+
+    // The user deletes the entry: they were not in that meeting.
+    await db
+        .delete(timeEntries)
+        .where(eq(timeEntries.id, promotedRow.promotedEntryId!));
+
+    const [afterDelete] = await db
+        .select()
+        .from(calendarEvents)
+        .where(eq(calendarEvents.userId, USER));
+
+    check(
+        "deleting the entry returns the meeting to the lane",
+        afterDelete.promotedEntryId === null,
+    );
+    check("but the offer is remembered", afterDelete.promotedAt !== null);
+    check(
+        "so a later sync does not create it again",
+        (await calendar.autoPromoteFinished(USER, settled)) === 0,
+    );
+    check(
+        "and it is still there to add by hand",
+        (
+            await calendar.findCalendarEvents(
+                USER,
+                from,
+                new Date(later.getTime() + 86_400_000),
+            )
+        ).length === 1,
+    );
+
     // The reconnect flag: set when Google stops renewing access, cleared by
     // any sync that gets far enough to stamp the connection.
     await reset();

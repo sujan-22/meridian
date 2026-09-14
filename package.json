@@ -27,6 +27,7 @@
         "check:access": "tsx scripts/check-access.ts",
         "check:polaris": "tsx scripts/check-polaris.ts",
         "check:layout": "tsx scripts/check-layout.ts",
+        "check:timesheet": "tsx scripts/check-timesheet.ts",
         "polaris:tasks": "tsx scripts/polaris-tasks.ts",
         "schema": "tsx scripts/print-schema.ts",
         "codegen": "pnpm schema && graphql-codegen --config codegen.ts",
