@@ -50,6 +50,17 @@ export const calendarEvents = pgTable(
             { onDelete: "set null" },
         ),
 
+        /**
+         * When this meeting was first turned into an entry.
+         *
+         * Separate from `promotedEntryId` because that column is cleared when
+         * the entry is deleted, and something has to remember that the offer
+         * was already made. Without it, deleting an auto-promoted meeting put
+         * it straight back in the queue and the next page load created it
+         * again - for a meeting the user had deliberately declined to log.
+         */
+        promotedAt: timestamp("promoted_at", { withTimezone: true }),
+
         /** Set when the meeting is waved away; it stays hidden after a sync. */
         dismissedAt: timestamp("dismissed_at", { withTimezone: true }),
 

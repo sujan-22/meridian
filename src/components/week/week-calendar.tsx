@@ -571,25 +571,14 @@ function DayColumn({
     const meetings = layoutDay(meetingPlacements);
 
     /**
-     * How much width tracked entries give up to the meetings lane.
+     * The meetings lane is always held open, whether or not the day has any.
      *
-     * Only where a meeting actually is. Reserving the lane for the whole day
-     * meant a single late-afternoon meeting narrowed every entry from nine in
-     * the morning onwards - and once an overlapping pair had halved that
-     * again, a full sentence was rendering one word per line.
-     *
-     * The decision is taken per cluster, not per entry: two blocks sitting
-     * side by side must agree on how wide they are.
+     * Surrendering the width only where a meeting sat used the space better,
+     * but it meant entries changed width down the column depending on what
+     * happened to be beside them, which reads as broken rather than clever. A
+     * lane that is always in the same place is worth more than the pixels.
      */
-    function widthFor(clusterStart: number, clusterEnd: number): number {
-        const collides = meetingPlacements.some(
-            (meeting) =>
-                meeting.startMinute < clusterEnd &&
-                meeting.endMinute > clusterStart,
-        );
-
-        return collides ? 1 - MEETING_LANE : 1;
-    }
+    const trackWidth = 1 - MEETING_LANE;
 
     const minutesFromTop = (minute: number) =>
         ((minute - startHour * 60) / 60) * hourHeight;
@@ -715,32 +704,32 @@ function DayColumn({
                         }}
                     />
                 ))}
+
+                {/* Where the day's own time ends and the calendar's begins. */}
+                <div
+                    aria-hidden="true"
+                    className="absolute inset-y-0 border-l border-dashed border-border/70"
+                    style={{ left: `${trackWidth * 100}%` }}
+                />
             </div>
 
-            {positioned.map(
-                ({ item, left, width, clusterStart, clusterEnd }) => {
-                    const track = widthFor(clusterStart, clusterEnd);
-
-                    return (
-                        <EntryBlock
-                            key={item.entry.id}
-                            entry={item.entry}
-                            dayIndex={dayIndex}
-                            startMinute={item.startMinute}
-                            endMinute={item.endMinute}
-                            top={minutesFromTop(item.startMinute)}
-                            height={
-                                ((item.endMinute - item.startMinute) / 60) *
-                                hourHeight
-                            }
-                            left={left * track}
-                            width={width * track}
-                            dragging={draggingId === item.entry.id}
-                            onBeginDrag={onBeginDrag}
-                        />
-                    );
-                },
-            )}
+            {positioned.map(({ item, left, width }) => (
+                <EntryBlock
+                    key={item.entry.id}
+                    entry={item.entry}
+                    dayIndex={dayIndex}
+                    startMinute={item.startMinute}
+                    endMinute={item.endMinute}
+                    top={minutesFromTop(item.startMinute)}
+                    height={
+                        ((item.endMinute - item.startMinute) / 60) * hourHeight
+                    }
+                    left={left * trackWidth}
+                    width={width * trackWidth}
+                    dragging={draggingId === item.entry.id}
+                    onBeginDrag={onBeginDrag}
+                />
+            ))}
 
             {meetings.map(({ item, left, width }) => (
                 <MeetingBlock
@@ -750,7 +739,7 @@ function DayColumn({
                     height={
                         ((item.endMinute - item.startMinute) / 60) * hourHeight
                     }
-                    left={1 - MEETING_LANE + left * MEETING_LANE}
+                    left={trackWidth + left * MEETING_LANE}
                     width={width * MEETING_LANE}
                     onPromote={onPromoteEvent}
                     onDismiss={onDismissEvent}

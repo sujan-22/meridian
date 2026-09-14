@@ -223,7 +223,7 @@ export async function promoteCalendarEvent(
 
         await tx
             .update(calendarEvents)
-            .set({ promotedEntryId: entry.id })
+            .set({ promotedEntryId: entry.id, promotedAt: new Date() })
             .where(eq(calendarEvents.id, event.id));
 
         return { entryId: entry.id };
@@ -298,7 +298,10 @@ export async function autoPromoteFinished(
         .where(
             and(
                 eq(calendarEvents.userId, userId),
-                isNull(calendarEvents.promotedEntryId),
+                // Offered once, and only once. A meeting whose entry has
+                // been deleted returns to the lane, where it stays unless
+                // the user puts it back themselves.
+                isNull(calendarEvents.promotedAt),
                 isNull(calendarEvents.dismissedAt),
                 lt(calendarEvents.endsAt, now),
                 gte(calendarEvents.endsAt, connection.connectedAt),
