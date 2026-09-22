@@ -15,6 +15,16 @@ export interface EntryPlacement {
 
 export interface DragPreview extends EntryPlacement {
     entryId: string;
+    /**
+     * Pixels between where the block is laid out and where the pointer
+     * actually is.
+     *
+     * Times snap to the quarter hour, which means the laid-out position only
+     * changes every fifteen minutes - a 56px jump at the closest zoom, with a
+     * dead 28px before it. Carrying the remainder lets the block sit exactly
+     * under the cursor while the value underneath it stays on the grid.
+     */
+    offsetY: number;
 }
 
 interface DragOrigin extends EntryPlacement {
@@ -52,6 +62,12 @@ export function useEntryDrag({
     const originRef = useRef<DragOrigin | null>(null);
     const previewRef = useRef<DragPreview | null>(null);
     const teardownRef = useRef<(() => void) | null>(null);
+
+    // Pointer events arrive faster than the screen refreshes, and each one was
+    // re-rendering every block in the week. Only the latest is kept, and it is
+    // applied once per frame.
+    const latestRef = useRef<PointerEvent | null>(null);
+    const frameRef = useRef<number | null>(null);
 
     const [preview, setPreview] = useState<DragPreview | null>(null);
 
@@ -100,6 +116,22 @@ export function useEntryDrag({
 
         let moved = false;
 
+        const applyLatest = () => {
+            frameRef.current = null;
+
+            const current = originRef.current;
+            const moveEvent = latestRef.current;
+
+            if (!current || !moveEvent) {
+                return;
+            }
+
+            const next = resolve(current, moveEvent, hourHeight);
+
+            previewRef.current = next;
+            setPreview(next);
+        };
+
         const handleMove = (moveEvent: PointerEvent) => {
             const current = originRef.current;
 
@@ -120,11 +152,11 @@ export function useEntryDrag({
             }
 
             moved = true;
+            latestRef.current = moveEvent;
 
-            const next = resolve(current, moveEvent, hourHeight);
-
-            previewRef.current = next;
-            setPreview(next);
+            if (frameRef.current === null) {
+                frameRef.current = requestAnimationFrame(applyLatest);
+            }
         };
 
         const finish = () => {
@@ -165,6 +197,13 @@ export function useEntryDrag({
         };
 
         const teardown = () => {
+            if (frameRef.current !== null) {
+                cancelAnimationFrame(frameRef.current);
+                frameRef.current = null;
+            }
+
+            latestRef.current = null;
+
             window.removeEventListener("pointermove", handleMove);
             window.removeEventListener("pointerup", finish);
             window.removeEventListener("pointercancel", handleCancel);
@@ -206,9 +245,8 @@ function resolve(
     event: PointerEvent,
     hourHeight: number,
 ): DragPreview {
-    const deltaMinutes = snap(
-        ((event.clientY - origin.pointerY) / hourHeight) * 60,
-    );
+    const rawMinutes = ((event.clientY - origin.pointerY) / hourHeight) * 60;
+    const deltaMinutes = snap(rawMinutes);
 
     if (origin.mode === "move") {
         const duration = origin.endMinute - origin.startMinute;
@@ -219,11 +257,19 @@ function resolve(
             MINUTES_PER_DAY - duration,
         );
 
+        // What snapping threw away, in pixels - and only as far as the block
+        // actually travelled, so it does not float past the top or bottom of
+        // the day once clamped.
+        const travelled = startMinute - snap(origin.startMinute);
+        const residual = ((rawMinutes - travelled) / 60) * hourHeight;
+
         return {
             entryId: origin.entryId,
-            dayIndex: columnAt(origin.columns, event.clientX) ?? origin.dayIndex,
+            dayIndex:
+                columnAt(origin.columns, event.clientX) ?? origin.dayIndex,
             startMinute,
             endMinute: startMinute + duration,
+            offsetY: residual,
         };
     }
 
@@ -237,6 +283,9 @@ function resolve(
                 origin.endMinute - QUARTER_MINUTES,
             ),
             endMinute: origin.endMinute,
+            // An edge being dragged reads better snapped: the block shows the
+            // length it will actually have.
+            offsetY: 0,
         };
     }
 
@@ -249,5 +298,6 @@ function resolve(
             origin.startMinute + QUARTER_MINUTES,
             MINUTES_PER_DAY,
         ),
+        offsetY: 0,
     };
 }
