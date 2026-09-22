@@ -13,7 +13,10 @@ import {
 } from "lucide-react";
 
 import { Logo } from "@/components/brand/logo";
-import { AccountMenu, type AccountUser } from "@/components/layout/account-menu";
+import {
+    AccountMenu,
+    type AccountUser,
+} from "@/components/layout/account-menu";
 
 import {
     Sidebar,
@@ -91,9 +94,7 @@ export function AppSidebar({ user }: { user: AccountUser }) {
                 exactly the same line as the topbar's. */}
             <SidebarHeader className="h-14 justify-center border-b border-sidebar-border p-0">
                 <div className="flex items-center gap-3 px-2">
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm shadow-primary/20">
-                        <Logo className="size-4.5" />
-                    </div>
+                    <Logo className="size-8 shrink-0" />
 
                     <div className="min-w-0 group-data-[collapsible=icon]:hidden">
                         <p className="truncate text-sm font-semibold tracking-tight">
