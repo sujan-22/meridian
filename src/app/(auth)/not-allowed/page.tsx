@@ -15,9 +15,7 @@ export const metadata: Metadata = {
 export default function NotAllowedPage() {
     return (
         <div className="rounded-xl border bg-card p-8 text-center">
-            <div className="mx-auto flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/20">
-                <Logo className="size-6" />
-            </div>
+            <Logo className="mx-auto size-12" />
 
             <h1 className="mt-4 text-xl font-semibold tracking-tight">
                 Not on the list

@@ -25,16 +25,12 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
 
     // Only same-site paths survive, so this cannot be pointed at another host.
     const destination =
-        next && next.startsWith("/") && !next.startsWith("//")
-            ? next
-            : "/week";
+        next && next.startsWith("/") && !next.startsWith("//") ? next : "/week";
 
     return (
         <div className="rounded-xl border bg-card p-8 shadow-sm">
             <div className="flex flex-col items-center gap-4 text-center">
-                <div className="flex size-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/20">
-                    <Logo className="size-6" />
-                </div>
+                <Logo className="size-12" />
 
                 <div className="space-y-1.5">
                     <h1 className="text-xl font-semibold tracking-tight">
