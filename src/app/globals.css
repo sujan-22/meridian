@@ -147,8 +147,28 @@
 }
 
 @layer base {
+    /* The night sky behind the whole app. It is a baked file rather than a
+       canvas: nothing about it moves, so there is nothing worth animating,
+       and the browser gets to cache it like any other image. Regenerate it
+       with `pnpm constellation` - the dials are at the top of that script.
+
+       The sidebar takes the same image because it is the one large surface
+       the app leaves open; everywhere else the cards cover it and only the
+       gutters show through, which is the whole of the intended effect. */
+    html,
+    [data-slot="sidebar-inner"] {
+        background-image: url("/constellation.svg");
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: cover;
+        /* Anchored to the viewport rather than to each element, so the part
+           behind the sidebar lines up exactly with the part behind the page
+           and the seam between the two disappears. */
+        background-attachment: fixed;
+    }
+
     html {
-        background: var(--background);
+        background-color: var(--background);
         color: var(--foreground);
     }
 
@@ -175,7 +195,9 @@
 
     body {
         min-height: 100svh;
-        background: var(--background);
+        /* Transparent, not `--background`: html paints the colour and the sky
+           above it, and an opaque body would cover the sky completely. */
+        background: transparent;
         /* Without this, anything not carrying an explicit text colour falls
            back to the browser default of black - invisible on the dark
            background. */
