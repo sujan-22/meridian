@@ -113,8 +113,15 @@ export const calendarConnections = pgTable("calendar_connections", {
         onDelete: "set null",
     }),
 
-    /** Meetings finish, then become entries by themselves. Off by default. */
-    autoPromote: boolean("auto_promote").default(true).notNull(),
+    /**
+     * Whether a finished meeting turns itself into an entry.
+     *
+     * Off. A meeting in the calendar is a thing that was scheduled, not a
+     * claim that it happened or that the time is yours to bill - deciding
+     * that is the whole job the lane exists to support, and doing it
+     * automatically took the decision away.
+     */
+    autoPromote: boolean("auto_promote").default(false).notNull(),
 
     /**
      * Set when Google stops renewing access, which for an app in Testing

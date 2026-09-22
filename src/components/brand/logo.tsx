@@ -1,35 +1,36 @@
 import { cn } from "@/lib/utils";
 
 /**
- * The Meridian mark: the meridian line crossing the day.
+ * The Meridian mark: a meridian cutting across the day.
  *
- * A meridian is the line the sun crosses at noon - the thing that divides a
- * day into its morning and its afternoon, and where a.m. and p.m. get their
- * names. The circle is the day, the filled half is the part of it already
- * spent, and the line runs past both because the meridian is not part of the
- * day it divides.
+ * A meridian is the line the sun crosses at noon - what divides a day into
+ * its morning and its afternoon, and where a.m. and p.m. get their names. The
+ * circle is the day; the blade is the line, tapered to a point at each end
+ * and running past the circle on both sides, because the meridian is not part
+ * of the day it divides.
  */
 export function Logo({ className }: { className?: string }) {
     return (
         <svg
             viewBox="0 0 24 24"
             fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
             aria-hidden="true"
             className={cn("size-5", className)}
         >
-            {/* Morning, already behind you. */}
-            <path
-                d="M12 19 A 7 7 0 0 1 12 5"
-                fill="currentColor"
-                stroke="none"
+            <circle
+                cx="12"
+                cy="12"
+                r="6.5"
+                stroke="currentColor"
+                strokeWidth="1.75"
             />
 
-            <circle cx="12" cy="12" r="7" />
-
-            <path d="M12 2 V 22" />
+            {/* Two quadratics meeting at the tips: widest at noon, nothing at
+                either end. */}
+            <path
+                d="M20 4 Q 14.8 14.8 4 20 Q 9.2 9.2 20 4 Z"
+                fill="currentColor"
+            />
         </svg>
     );
 }

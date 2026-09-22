@@ -47,7 +47,12 @@ async function main() {
     }
 
     await reset();
-    await calendar.touchCalendarConnection(USER);
+    const fresh = await calendar.touchCalendarConnection(USER);
+
+    check(
+        "a new connection does not promote by itself",
+        fresh.autoPromote === false,
+    );
 
     // A first sync stores what Google returned.
     await calendar.syncCalendarWindow(USER, from, to, [
@@ -156,7 +161,9 @@ async function main() {
 
     // Auto-promote ignores anything that ended before the calendar was linked.
     await reset();
-    const connection = await calendar.touchCalendarConnection(USER);
+    const connection = await calendar.touchCalendarConnection(USER, {
+        autoPromote: true,
+    });
     await calendar.syncCalendarWindow(USER, from, to, [
         {
             googleEventId: "old",
@@ -212,7 +219,9 @@ async function main() {
 
     // Deleting a promoted meeting's entry must not hand it straight back.
     await reset();
-    const conn = await calendar.touchCalendarConnection(USER);
+    const conn = await calendar.touchCalendarConnection(USER, {
+        autoPromote: true,
+    });
     const later = new Date(conn.connectedAt.getTime() + 60_000);
 
     await calendar.syncCalendarWindow(
@@ -270,6 +279,34 @@ async function main() {
                 new Date(later.getTime() + 86_400_000),
             )
         ).length === 1,
+    );
+
+    // With it off - the default - a finished meeting is left where it is.
+    await reset();
+    const quiet = await calendar.touchCalendarConnection(USER);
+    const quietFrom = new Date(quiet.connectedAt.getTime() + 60_000);
+
+    await calendar.syncCalendarWindow(
+        USER,
+        from,
+        new Date(quietFrom.getTime() + 86_400_000),
+        [
+            {
+                googleEventId: "left-alone",
+                calendarId: "primary",
+                title: `${gardner.name} Standup`,
+                startsAt: quietFrom,
+                endsAt: new Date(quietFrom.getTime() + 900_000),
+            },
+        ],
+    );
+
+    check(
+        "with auto-promote off a finished meeting stays in the lane",
+        (await calendar.autoPromoteFinished(
+            USER,
+            new Date(quietFrom.getTime() + 1_800_000),
+        )) === 0,
     );
 
     // The reconnect flag: set when Google stops renewing access, cleared by

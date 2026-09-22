@@ -282,6 +282,7 @@ export function WeekCalendar({
                                 onPromoteEvent={onPromoteEvent}
                                 onDismissEvent={onDismissEvent}
                                 draggingId={preview?.entryId ?? null}
+                                dragOffsetY={preview?.offsetY ?? 0}
                                 ticks={ticks}
                                 startHour={startHour}
                                 endHour={endHour}
@@ -348,6 +349,11 @@ function MeetingBlock({
     const end = new Date(event.endsAt);
     const minutes = Math.round((end.getTime() - start.getTime()) / 60_000);
 
+    // Already in the day. It stays on show so the hour beside it is visibly
+    // one that came from the calendar, but it is finished with: nothing to
+    // add, and clicking it must not add it twice.
+    const added = event.isPromoted;
+
     return (
         <div
             className="group absolute"
@@ -360,24 +366,53 @@ function MeetingBlock({
         >
             <button
                 type="button"
-                onClick={() => onPromote(event)}
-                title={`${event.title} · ${format(start, "HH:mm")}–${format(end, "HH:mm")}\nClick to add to the day`}
-                aria-label={`Add "${event.title}" at ${format(start, "HH:mm")} to the day`}
-                className="flex size-full flex-col items-stretch justify-start overflow-hidden rounded-md border border-dashed border-primary/45 bg-primary/5 px-1.5 py-1 text-left transition-colors hover:border-primary/80 hover:bg-primary/15"
+                onClick={added ? undefined : () => onPromote(event)}
+                aria-disabled={added}
+                title={
+                    added
+                        ? `${event.title} · ${format(start, "HH:mm")}–${format(end, "HH:mm")}\nAlready added to the day`
+                        : `${event.title} · ${format(start, "HH:mm")}–${format(end, "HH:mm")}\nClick to add to the day`
+                }
+                aria-label={
+                    added
+                        ? `"${event.title}" at ${format(start, "HH:mm")} is already in the day`
+                        : `Add "${event.title}" at ${format(start, "HH:mm")} to the day`
+                }
+                className={cn(
+                    "flex size-full flex-col items-stretch justify-start overflow-hidden rounded-md border border-dashed px-1.5 py-1 text-left transition-colors",
+                    added
+                        ? "cursor-default border-border/50 bg-muted/20 opacity-55"
+                        : "border-primary/45 bg-primary/5 hover:border-primary/80 hover:bg-primary/15",
+                )}
             >
                 {/* A quarter-hour box has room for one line, and the title
                     is the part worth reading - the time is already told by
                     where the block sits. */}
                 {minutes < QUARTER_MINUTES * 2 ? (
                     <span className="flex items-center gap-1 text-[0.6875rem] text-foreground/80">
-                        <Calendar className="size-2.5 shrink-0 text-primary/80" />
+                        {added ? (
+                            <Check className="size-2.5 shrink-0 text-emerald-500" />
+                        ) : (
+                            <Calendar className="size-2.5 shrink-0 text-primary/80" />
+                        )}
 
                         <span className="truncate">{event.title}</span>
                     </span>
                 ) : (
                     <>
-                        <span className="flex items-center gap-1 text-[0.625rem] text-primary/80">
-                            <Calendar className="size-2.5 shrink-0" />
+                        <span
+                            className={cn(
+                                "flex items-center gap-1 text-[0.625rem]",
+                                added
+                                    ? "text-muted-foreground"
+                                    : "text-primary/80",
+                            )}
+                        >
+                            {added ? (
+                                <Check className="size-2.5 shrink-0 text-emerald-500" />
+                            ) : (
+                                <Calendar className="size-2.5 shrink-0" />
+                            )}
 
                             <span className="truncate font-mono tabular-nums">
                                 {format(start, "HH:mm")}
@@ -393,14 +428,16 @@ function MeetingBlock({
 
             {/* Both actions stay out of the way until the block is hovered. */}
             <span className="pointer-events-none absolute right-0.5 top-0.5 flex gap-0.5 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
-                <button
-                    type="button"
-                    aria-label={`Add "${event.title}" to the day`}
-                    onClick={() => onPromote(event)}
-                    className="flex size-4 items-center justify-center rounded bg-primary text-primary-foreground"
-                >
-                    <Plus className="size-3" />
-                </button>
+                {!added && (
+                    <button
+                        type="button"
+                        aria-label={`Add "${event.title}" to the day`}
+                        onClick={() => onPromote(event)}
+                        className="flex size-4 items-center justify-center rounded bg-primary text-primary-foreground"
+                    >
+                        <Plus className="size-3" />
+                    </button>
+                )}
 
                 <button
                     type="button"
@@ -503,6 +540,8 @@ interface DayColumnProps {
     day: Date;
     dayIndex: number;
     placements: Placement[];
+    /** Pixels the dragged block is offset by, so it tracks the pointer. */
+    dragOffsetY: number;
     events: readonly CalendarEventFieldsFragment[];
     onPromoteEvent: (event: CalendarEventFieldsFragment) => void;
     onDismissEvent: (event: CalendarEventFieldsFragment) => void;
@@ -535,6 +574,7 @@ function DayColumn({
     day,
     dayIndex,
     placements,
+    dragOffsetY,
     events,
     onPromoteEvent,
     onDismissEvent,
@@ -555,13 +595,13 @@ function DayColumn({
     const positioned = layoutDay(placements);
 
     /**
-     * Meetings not yet accepted. Promoted ones are already drawn as entries in
-     * the primary lane, so leaving them here too would show the same hour
-     * twice.
+     * Every meeting the calendar holds for this day, promoted or not.
+     *
+     * A meeting that has been added to the day stays here too, marked as
+     * added. Hiding it lost the one thing the lane is for - being able to see
+     * at a glance that an hour came from the calendar rather than from you.
      */
-    const pending = events.filter((event) => !event.isPromoted);
-
-    const meetingPlacements = pending.map((event) => ({
+    const meetingPlacements = events.map((event) => ({
         id: event.id,
         event,
         startMinute: minuteOfDay(new Date(event.startsAt)),
@@ -727,6 +767,7 @@ function DayColumn({
                     left={left * trackWidth}
                     width={width * trackWidth}
                     dragging={draggingId === item.entry.id}
+                    offsetY={draggingId === item.entry.id ? dragOffsetY : 0}
                     onBeginDrag={onBeginDrag}
                 />
             ))}
@@ -788,6 +829,7 @@ interface EntryBlockProps {
     left: number;
     width: number;
     dragging: boolean;
+    offsetY: number;
     onBeginDrag: DayColumnProps["onBeginDrag"];
 }
 
@@ -801,6 +843,7 @@ function EntryBlock({
     left,
     width,
     dragging,
+    offsetY,
     onBeginDrag,
 }: EntryBlockProps) {
     const color = projectColor(entry.project);
@@ -835,6 +878,9 @@ function EntryBlock({
                 height: `${Math.max(height - 2, 20)}px`,
                 left: `calc(${left * 100}% + 2px)`,
                 width: `calc(${width * 100}% - 4px)`,
+                // The layout stays on the quarter hour; this puts the block
+                // back under the cursor in between.
+                transform: offsetY ? `translateY(${offsetY}px)` : undefined,
             }}
         >
             <EntryHoverCard entry={entry} disabled={dragging}>
