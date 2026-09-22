@@ -30,6 +30,7 @@
         "check:timesheet": "tsx scripts/check-timesheet.ts",
         "polaris:tasks": "tsx scripts/polaris-tasks.ts",
         "schema": "tsx scripts/print-schema.ts",
+        "constellation": "tsx scripts/make-constellation.ts",
         "codegen": "pnpm schema && graphql-codegen --config codegen.ts",
         "codegen:watch": "graphql-codegen --config codegen.ts --watch"
     },

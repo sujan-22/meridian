@@ -82,7 +82,13 @@ export const config = {
         /*
          * Everything except Next's own build output and static files - the
          * GraphQL route included, since that is where the data actually is.
+         *
+         * The brand assets have to be listed too. The sign-in page is shown
+         * to someone with no cookies at all, so anything it paints must be
+         * reachable without them: left in, the proxy answers the background's
+         * request with a redirect to the sign-in page and the page loads
+         * without its own background. They are decoration, not data.
          */
-        "/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|robots.txt|sitemap.xml).*)",
+        "/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|constellation.svg|logo.png|manifest.webmanifest|robots.txt|sitemap.xml).*)",
     ],
 };

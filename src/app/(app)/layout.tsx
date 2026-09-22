@@ -44,8 +44,12 @@ export default async function AppLayout({ children }: AppLayoutProps) {
                 automatic minimum width at the full viewport - so it renders
                 the sidebar's width past the right edge and the page scrolls
                 horizontally. `min-w-0` lets it shrink to the space actually
-                left over. */}
-            <SidebarInset className="min-w-0">
+                left over.
+
+                It also ships opaque, which would hide the sky behind every
+                page; transparent lets it show through in the gutters around
+                the cards, where there is nothing to read. */}
+            <SidebarInset className="min-w-0 bg-transparent">
                 <AppTopbar />
 
                 <main className="flex min-h-0 min-w-0 flex-1 flex-col">
