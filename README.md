@@ -1,16 +1,18 @@
-# Quanta
+# Meridian
 
-Quarter-hour time tracking, built around one workflow:
+**Time tracking that ends in a finished timesheet.** Quarter-hour time tracking, built around one workflow:
 
 > Track work through the week, then fill the Friday timesheet in minutes
 > instead of reconstructing it from memory.
 
-Everything is measured in quarter hours — the smallest unit that can be
-billed — which is where the name comes from. The raw timer stamps stay exact
-in the database; the quarter-hour figure is derived on top, so nothing is lost
-by rounding.
+Everything is measured in quarter hours, the smallest unit that can be
+billed. The raw timer stamps stay exact in the database; the quarter-hour
+figure is derived on top, so nothing is lost by rounding.
 
-Built by **Sujan Rokad**.
+**Live:** [antemeridian.vercel.app](https://antemeridian.vercel.app) (sign-in required: it's my own
+working tool, so access is limited to an allowlist).
+
+Built by [Sujan Rokad](https://sujanrokad.com).
 
 ---
 
@@ -45,7 +47,7 @@ pnpm dev
 ```
 
 > **Existing setup:** if you already have a `time-heist-postgres` container
-> holding real data, keep using it — `docker compose up -d` would collide on
+> holding real data, keep using it: `docker compose up -d` would collide on
 > port 5432 and give you an empty database. To move that data into the compose
 > volume instead:
 >
@@ -76,13 +78,13 @@ reload cannot register the same field twice.
 screen. Entries already present are skipped on a natural key, so re-importing
 the same file is safe. Two columns are deliberately ignored:
 
-- `Billable` — Toggl exports mark everything non-billable, so each entry takes
+- `Billable`: Toggl exports mark everything non-billable, so each entry takes
   its project's default instead.
-- `Client` — always empty in the export; clients come from the project name.
+- `Client`: always empty in the export; clients come from the project name.
 
 ## Deployment
 
 Vercel + Neon. `pnpm vercel-build` runs `drizzle-kit migrate` before
 `next build`, so schema changes ship with the deploy. Set `DATABASE_URL` to
-Neon's **pooled** string and `DATABASE_URL_UNPOOLED` to the direct one —
+Neon's **pooled** string and `DATABASE_URL_UNPOOLED` to the direct one, since
 migrations run DDL, which the pooler handles poorly.
