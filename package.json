@@ -28,6 +28,7 @@
         "check:polaris": "tsx scripts/check-polaris.ts",
         "check:layout": "tsx scripts/check-layout.ts",
         "check:optimistic": "tsx scripts/check-optimistic.ts",
+        "check:reports": "tsx scripts/check-reports.ts",
         "check:timesheet": "tsx scripts/check-timesheet.ts",
         "polaris:tasks": "tsx scripts/polaris-tasks.ts",
         "schema": "tsx scripts/print-schema.ts",
