@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useQuery } from "@apollo/client/react";
-import { formatDistanceToNowStrict } from "date-fns";
-import { Gauge, Search, TriangleAlert } from "lucide-react";
+import { format, formatDistanceToNowStrict } from "date-fns";
+import { ChevronDown, Gauge, Search, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,8 +29,9 @@ const FILTERS: Array<{ value: Filter; label: string }> = [
 export function TicketsView() {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState<Filter>("all");
-    const [editing, setEditing] =
-        useState<TicketSummaryFieldsFragment | null>(null);
+    const [editing, setEditing] = useState<TicketSummaryFieldsFragment | null>(
+        null,
+    );
 
     const { data, loading } = useQuery(TicketSummariesDocument);
 
@@ -51,9 +52,7 @@ export function TicketsView() {
             }
 
             if (filter === "attention") {
-                return (
-                    ticket.status === "OVER" || ticket.status === "NEARING"
-                );
+                return ticket.status === "OVER" || ticket.status === "NEARING";
             }
 
             return true;
@@ -79,7 +78,9 @@ export function TicketsView() {
                     <span className="flex items-center gap-1.5 font-medium text-amber-400">
                         <TriangleAlert className="size-3.5" />
                         {attention.length}{" "}
-                        {attention.length === 1 ? "ticket needs" : "tickets need"}{" "}
+                        {attention.length === 1
+                            ? "ticket needs"
+                            : "tickets need"}{" "}
                         attention
                     </span>
 
@@ -184,14 +185,13 @@ interface TicketCardProps {
 }
 
 function TicketCard({ ticket, onEdit }: TicketCardProps) {
+    const [expanded, setExpanded] = useState(false);
     const color = projectColor(ticket.project);
     const max = ticket.estimateMaxMinutes;
     const min = ticket.estimateMinMinutes;
 
     const percent =
-        max && max > 0
-            ? Math.min(100, (ticket.trackedMinutes / max) * 100)
-            : 0;
+        max && max > 0 ? Math.min(100, (ticket.trackedMinutes / max) * 100) : 0;
 
     const minPercent =
         max && max > 0 && min != null ? Math.min(100, (min / max) * 100) : null;
@@ -230,6 +230,35 @@ function TicketCard({ ticket, onEdit }: TicketCardProps) {
                                 { addSuffix: true },
                             )}`}
                         {ticket.estimateNotes && ` · ${ticket.estimateNotes}`}
+                    </p>
+
+                    {/* The two halves, which add up to the total on the right. */}
+                    <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[0.6875rem]">
+                        <span
+                            className={cn(
+                                "font-mono tabular-nums",
+                                ticket.billableMinutes > 0
+                                    ? "text-emerald-400"
+                                    : "text-muted-foreground/50",
+                            )}
+                        >
+                            {formatMinutesAsHours(ticket.billableMinutes)} h
+                            billable
+                        </span>
+
+                        <span className="text-muted-foreground/40">+</span>
+
+                        <span
+                            className={cn(
+                                "font-mono tabular-nums",
+                                ticket.unbillableMinutes > 0
+                                    ? "text-amber-400"
+                                    : "text-muted-foreground/50",
+                            )}
+                        >
+                            {formatMinutesAsHours(ticket.unbillableMinutes)} h
+                            written off
+                        </span>
                     </p>
                 </div>
 
@@ -274,6 +303,24 @@ function TicketCard({ ticket, onEdit }: TicketCardProps) {
                         <Gauge className="size-3.5" />
                         {max == null ? "Add estimate" : "Edit"}
                     </Button>
+
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        aria-expanded={expanded}
+                        aria-label={`${expanded ? "Hide" : "Show"} the ${
+                            ticket.entryCount
+                        } entries on ticket ${ticket.ticketNumber}`}
+                        onClick={() => setExpanded((shown) => !shown)}
+                    >
+                        <ChevronDown
+                            className={cn(
+                                "size-4 transition-transform",
+                                expanded && "rotate-180",
+                            )}
+                        />
+                    </Button>
                 </div>
             </div>
 
@@ -301,7 +348,124 @@ function TicketCard({ ticket, onEdit }: TicketCardProps) {
                     )}
                 </div>
             )}
+
+            {expanded && <TicketEntries ticket={ticket} />}
         </li>
+    );
+}
+
+/**
+ * Every session booked against the ticket, oldest first.
+ *
+ * The written-off column is only drawn where there is something to write off -
+ * a column of zeroes says nothing and makes the ones that matter harder to
+ * find.
+ */
+function TicketEntries({ ticket }: { ticket: TicketSummaryFieldsFragment }) {
+    const hasWriteOffs = ticket.unbillableMinutes > 0;
+
+    return (
+        <div className="mt-3 overflow-x-auto border-t border-border/60 pt-3">
+            <table className="w-full min-w-144 text-xs">
+                <thead>
+                    <tr className="text-[0.625rem] uppercase tracking-wide text-muted-foreground">
+                        <th className="pb-1.5 pr-3 text-left font-medium">
+                            Date
+                        </th>
+                        <th className="pb-1.5 pr-3 text-left font-medium">
+                            Time
+                        </th>
+                        <th className="pb-1.5 pr-3 text-left font-medium">
+                            What was done
+                        </th>
+                        <th className="pb-1.5 pr-3 text-right font-medium">
+                            Hours
+                        </th>
+                        {hasWriteOffs && (
+                            <th className="pb-1.5 text-right font-medium">
+                                Written off
+                            </th>
+                        )}
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {ticket.entries.map((entry) => {
+                        const started = new Date(entry.startedAt);
+
+                        return (
+                            <tr
+                                key={entry.id}
+                                className="border-t border-border/40 align-top"
+                            >
+                                <td className="whitespace-nowrap py-1.5 pr-3 font-mono tabular-nums text-muted-foreground">
+                                    {format(started, "EEE d MMM")}
+                                </td>
+
+                                <td className="whitespace-nowrap py-1.5 pr-3 font-mono tabular-nums text-muted-foreground">
+                                    {format(started, "HH:mm")}
+                                    {entry.endedAt &&
+                                        `–${format(new Date(entry.endedAt), "HH:mm")}`}
+                                </td>
+
+                                <td className="py-1.5 pr-3 leading-snug">
+                                    {entry.description}
+
+                                    {entry.kind === "MEETING" && (
+                                        <span className="ml-1.5 rounded bg-muted px-1 py-0.5 text-[0.5625rem] uppercase tracking-wide text-muted-foreground">
+                                            Meeting
+                                        </span>
+                                    )}
+                                </td>
+
+                                <td className="whitespace-nowrap py-1.5 pr-3 text-right font-mono tabular-nums">
+                                    {formatMinutesAsHours(entry.billedMinutes)}
+                                </td>
+
+                                {hasWriteOffs && (
+                                    <td
+                                        className={cn(
+                                            "whitespace-nowrap py-1.5 text-right font-mono tabular-nums",
+                                            entry.unbillableMinutes > 0
+                                                ? "text-amber-400"
+                                                : "text-muted-foreground/30",
+                                        )}
+                                    >
+                                        {entry.unbillableMinutes > 0
+                                            ? formatMinutesAsHours(
+                                                  entry.unbillableMinutes,
+                                              )
+                                            : "·"}
+                                    </td>
+                                )}
+                            </tr>
+                        );
+                    })}
+                </tbody>
+
+                <tfoot>
+                    <tr className="border-t border-border/60 font-medium">
+                        <td
+                            colSpan={3}
+                            className="pt-1.5 pr-3 text-right text-muted-foreground"
+                        >
+                            {ticket.entryCount}{" "}
+                            {ticket.entryCount === 1 ? "entry" : "entries"}
+                        </td>
+
+                        <td className="pt-1.5 pr-3 text-right font-mono tabular-nums">
+                            {formatMinutesAsHours(ticket.trackedMinutes)}
+                        </td>
+
+                        {hasWriteOffs && (
+                            <td className="pt-1.5 text-right font-mono tabular-nums text-amber-400">
+                                {formatMinutesAsHours(ticket.unbillableMinutes)}
+                            </td>
+                        )}
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
     );
 }
 
@@ -348,10 +512,7 @@ export function describeRemaining(
         : `${formatMinutesAsHours(ticket.remainingMinutes)} h left`;
 }
 
-function matches(
-    ticket: TicketSummaryFieldsFragment,
-    search: string,
-): boolean {
+function matches(ticket: TicketSummaryFieldsFragment, search: string): boolean {
     const term = search.trim().toLowerCase();
 
     if (!term) {

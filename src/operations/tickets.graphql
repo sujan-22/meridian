@@ -1,6 +1,8 @@
 fragment TicketSummaryFields on TicketSummary {
     ticketNumber
     trackedMinutes
+    billableMinutes
+    unbillableMinutes
     entryCount
     firstTrackedAt
     lastTrackedAt
@@ -12,6 +14,19 @@ fragment TicketSummaryFields on TicketSummary {
 
     project {
         ...ProjectFields
+    }
+
+    entries {
+        id
+        description
+        kind
+        billingType
+        unbillablePercent
+        startedAt
+        endedAt
+        billedMinutes
+        billableMinutes
+        unbillableMinutes
     }
 }
 
