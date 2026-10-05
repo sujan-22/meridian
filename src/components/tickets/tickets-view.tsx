@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useQuery } from "@apollo/client/react";
 import { format, formatDistanceToNowStrict } from "date-fns";
-import { ChevronDown, Gauge, Search, TriangleAlert } from "lucide-react";
+import {
+    ChevronDown,
+    FolderTree,
+    Gauge,
+    Search,
+    TriangleAlert,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +25,14 @@ import { cn } from "@/lib/utils";
 
 type Filter = "all" | "estimated" | "attention" | "unestimated";
 
+type Sort = "attention" | "hours" | "recent";
+
+const SORTS: Array<{ value: Sort; label: string }> = [
+    { value: "recent", label: "Recently worked" },
+    { value: "attention", label: "Needs attention" },
+    { value: "hours", label: "Most hours" },
+];
+
 const FILTERS: Array<{ value: Filter; label: string }> = [
     { value: "all", label: "All" },
     { value: "attention", label: "Needs attention" },
@@ -29,6 +43,8 @@ const FILTERS: Array<{ value: Filter; label: string }> = [
 export function TicketsView() {
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState<Filter>("all");
+    const [sort, setSort] = useState<Sort>("recent");
+    const [byProject, setByProject] = useState(false);
     const [editing, setEditing] = useState<TicketSummaryFieldsFragment | null>(
         null,
     );
@@ -58,7 +74,7 @@ export function TicketsView() {
             return true;
         })
         .filter((ticket) => matches(ticket, search))
-        .sort(compareTickets);
+        .sort(sorterFor(sort));
 
     return (
         <div className="flex w-full flex-1 flex-col px-5 py-6 lg:px-8 2xl:px-10">
@@ -143,6 +159,42 @@ export function TicketsView() {
                         </button>
                     ))}
                 </div>
+
+                <div
+                    role="radiogroup"
+                    aria-label="Sort tickets"
+                    className="inline-flex rounded-md border border-input p-0.5"
+                >
+                    {SORTS.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={option.value === sort}
+                            onClick={() => setSort(option.value)}
+                            className={cn(
+                                "h-7 rounded-[6px] px-2.5 text-xs font-medium transition-colors",
+                                option.value === sort
+                                    ? "bg-secondary text-secondary-foreground"
+                                    : "text-muted-foreground hover:text-foreground",
+                            )}
+                        >
+                            {option.label}
+                        </button>
+                    ))}
+                </div>
+
+                <Button
+                    type="button"
+                    variant={byProject ? "secondary" : "outline"}
+                    size="sm"
+                    aria-pressed={byProject}
+                    onClick={() => setByProject((grouped) => !grouped)}
+                    className="gap-1.5"
+                >
+                    <FolderTree className="size-3.5" />
+                    By project
+                </Button>
             </div>
 
             {loading && tickets.length === 0 ? (
@@ -157,6 +209,16 @@ export function TicketsView() {
                             ? "No ticketed work tracked yet."
                             : "No tickets match that filter."}
                     </p>
+                </div>
+            ) : byProject ? (
+                <div className="flex flex-col gap-5">
+                    {groupByProject(visible).map((group) => (
+                        <ProjectGroup
+                            key={group.project.id}
+                            group={group}
+                            onEdit={setEditing}
+                        />
+                    ))}
                 </div>
             ) : (
                 <ul className="flex flex-col gap-2">
@@ -176,6 +238,116 @@ export function TicketsView() {
                 ticket={editing}
             />
         </div>
+    );
+}
+
+/**
+ * One project, what it has cost so far, and the tickets that make it up.
+ *
+ * The summary answers the question the flat list cannot: how much of this
+ * client's work is on the books, and how much of it is being written off.
+ */
+function ProjectGroup({
+    group,
+    onEdit,
+}: {
+    group: ProjectTicketGroup;
+    onEdit: (ticket: TicketSummaryFieldsFragment) => void;
+}) {
+    const color = projectColor(group.project);
+
+    return (
+        <section data-project-group={group.project.id}>
+            <header className="mb-2 rounded-xl border border-border/70 bg-card px-4 py-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+                            <span
+                                aria-hidden
+                                className="size-2.5 shrink-0 rounded-full"
+                                style={{ backgroundColor: color }}
+                            />
+
+                            <h3 className="text-sm font-semibold tracking-tight">
+                                {group.project.name}
+                            </h3>
+
+                            <span className="text-xs text-muted-foreground">
+                                {group.project.client.name}
+                            </span>
+
+                            {group.needsAttention > 0 && (
+                                <span className="flex items-center gap-1 rounded bg-amber-500/10 px-1.5 py-0.5 text-[0.625rem] font-medium text-amber-400">
+                                    <TriangleAlert className="size-3" />
+                                    {group.needsAttention} over or nearing
+                                </span>
+                            )}
+                        </div>
+
+                        <p className="mt-1 text-[0.6875rem] text-muted-foreground">
+                            {group.tickets.length}{" "}
+                            {group.tickets.length === 1 ? "ticket" : "tickets"}
+                            {" · "}
+                            {group.entryCount}{" "}
+                            {group.entryCount === 1 ? "entry" : "entries"}
+                            {group.lastTrackedAt &&
+                                ` · last worked ${formatDistanceToNowStrict(
+                                    new Date(group.lastTrackedAt),
+                                    { addSuffix: true },
+                                )}`}
+                        </p>
+                    </div>
+
+                    <div className="text-right">
+                        <p className="font-mono text-base font-medium tabular-nums">
+                            {formatMinutesAsHours(group.trackedMinutes)}
+                            <span className="ml-1 text-xs font-normal text-muted-foreground">
+                                h
+                            </span>
+                        </p>
+
+                        <p className="mt-0.5 flex items-center justify-end gap-1.5 text-[0.6875rem]">
+                            <span
+                                className={cn(
+                                    "font-mono tabular-nums",
+                                    group.billableMinutes > 0
+                                        ? "text-emerald-400"
+                                        : "text-muted-foreground/50",
+                                )}
+                            >
+                                {formatMinutesAsHours(group.billableMinutes)}{" "}
+                                billable
+                            </span>
+
+                            <span className="text-muted-foreground/40">+</span>
+
+                            <span
+                                className={cn(
+                                    "font-mono tabular-nums",
+                                    group.unbillableMinutes > 0
+                                        ? "text-amber-400"
+                                        : "text-muted-foreground/50",
+                                )}
+                            >
+                                {formatMinutesAsHours(group.unbillableMinutes)}{" "}
+                                written off
+                            </span>
+                        </p>
+                    </div>
+                </div>
+            </header>
+
+            {/* Indented so the tickets read as belonging to the project. */}
+            <ul className="flex flex-col gap-2 border-l border-border/50 pl-3">
+                {group.tickets.map((ticket) => (
+                    <TicketCard
+                        key={`${ticket.project.id}:${ticket.ticketNumber}`}
+                        ticket={ticket}
+                        onEdit={onEdit}
+                    />
+                ))}
+            </ul>
+        </section>
     );
 }
 
@@ -536,6 +708,101 @@ const STATUS_ORDER: Record<string, number> = {
     OK: 2,
     NONE: 3,
 };
+
+/** How the list is ordered, which is a different question from what it shows. */
+function sorterFor(sort: Sort) {
+    if (sort === "hours") {
+        return (
+            a: TicketSummaryFieldsFragment,
+            b: TicketSummaryFieldsFragment,
+        ) => b.trackedMinutes - a.trackedMinutes;
+    }
+
+    if (sort === "recent") {
+        return (
+            a: TicketSummaryFieldsFragment,
+            b: TicketSummaryFieldsFragment,
+        ) => {
+            // A ticket with no tracked time sorts last rather than first.
+            const left = a.lastTrackedAt
+                ? new Date(a.lastTrackedAt).getTime()
+                : 0;
+            const right = b.lastTrackedAt
+                ? new Date(b.lastTrackedAt).getTime()
+                : 0;
+
+            return right - left;
+        };
+    }
+
+    return compareTickets;
+}
+
+export interface ProjectTicketGroup {
+    project: TicketSummaryFieldsFragment["project"];
+    tickets: TicketSummaryFieldsFragment[];
+    trackedMinutes: number;
+    billableMinutes: number;
+    unbillableMinutes: number;
+    entryCount: number;
+    /** How many of its tickets are over or nearing their estimate. */
+    needsAttention: number;
+    lastTrackedAt: string | null;
+}
+
+/**
+ * The same tickets, gathered under the project they belong to.
+ *
+ * Order is inherited from the list rather than recomputed, so whichever sort
+ * is chosen still decides what comes first inside each project; the projects
+ * themselves lead with the one holding the most time.
+ */
+function groupByProject(
+    tickets: readonly TicketSummaryFieldsFragment[],
+): ProjectTicketGroup[] {
+    const groups = new Map<string, ProjectTicketGroup>();
+
+    for (const ticket of tickets) {
+        let group = groups.get(ticket.project.id);
+
+        if (!group) {
+            group = {
+                project: ticket.project,
+                tickets: [],
+                trackedMinutes: 0,
+                billableMinutes: 0,
+                unbillableMinutes: 0,
+                entryCount: 0,
+                needsAttention: 0,
+                lastTrackedAt: null,
+            };
+
+            groups.set(ticket.project.id, group);
+        }
+
+        group.tickets.push(ticket);
+        group.trackedMinutes += ticket.trackedMinutes;
+        group.billableMinutes += ticket.billableMinutes;
+        group.unbillableMinutes += ticket.unbillableMinutes;
+        group.entryCount += ticket.entryCount;
+
+        if (ticket.status === "OVER" || ticket.status === "NEARING") {
+            group.needsAttention += 1;
+        }
+
+        if (
+            ticket.lastTrackedAt &&
+            (!group.lastTrackedAt ||
+                new Date(ticket.lastTrackedAt) > new Date(group.lastTrackedAt))
+        ) {
+            group.lastTrackedAt = ticket.lastTrackedAt;
+        }
+    }
+
+    return [...groups.values()].sort(
+        (a, b) => b.trackedMinutes - a.trackedMinutes,
+    );
+}
 
 function compareTickets(
     a: TicketSummaryFieldsFragment,
