@@ -1,10 +1,9 @@
-import { PagePlaceholder } from "@/components/layout/page-placeholder";
+import { ReportsView } from "@/components/reports/reports-view";
+
+export const metadata = {
+    title: "Reports",
+};
 
 export default function ReportsPage() {
-    return (
-        <PagePlaceholder
-            title="Reports"
-            description="See where your time went."
-        />
-    );
+    return <ReportsView />;
 }
