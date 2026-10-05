@@ -99,34 +99,27 @@ export function WeekView() {
         skip: !range,
     });
 
-    const refetchCalendar = [
-        {
-            query: CalendarEventsDocument,
-            variables: range
-                ? { from: range.from.toISOString(), to: range.to.toISOString() }
-                : { from: "", to: "" },
-        },
-        {
-            query: EntriesDocument,
-            variables: range
-                ? { from: range.from.toISOString(), to: range.to.toISOString() }
-                : { from: "", to: "" },
-        },
-    ];
+    const rangeVariables = range
+        ? { from: range.from.toISOString(), to: range.to.toISOString() }
+        : { from: "", to: "" };
 
-    const [syncCalendar] = useMutation(SyncCalendarDocument, {
-        refetchQueries: refetchCalendar,
-        awaitRefetchQueries: true,
-    });
+    // Nothing awaits a refetch any more. Waiting for one only delayed what was
+    // already on screen; the lane and the grid update when the data arrives.
+    const [syncCalendar] = useMutation(SyncCalendarDocument);
 
     const [promoteEvent] = useMutation(PromoteCalendarEventDocument, {
-        refetchQueries: refetchCalendar,
-        awaitRefetchQueries: true,
+        // Promoting makes an entry and marks the meeting, so both move.
+        refetchQueries: [
+            { query: CalendarEventsDocument, variables: rangeVariables },
+            { query: EntriesDocument, variables: rangeVariables },
+        ],
     });
 
     const [dismissEvent] = useMutation(DismissCalendarEventDocument, {
-        refetchQueries: refetchCalendar,
-        awaitRefetchQueries: true,
+        // Hiding a meeting touches nothing the grid is showing.
+        refetchQueries: [
+            { query: CalendarEventsDocument, variables: rangeVariables },
+        ],
     });
 
     /**
@@ -136,6 +129,12 @@ export function WeekView() {
      */
     const syncedRanges = useRef(new Set<string>());
     const connected = calendarStatus.data?.calendarStatus.googleLinked;
+
+    // Held separately so the effect can depend on the functions rather than on
+    // the query objects, which are new on every render.
+    const refetchCalendarEvents = calendarQuery.refetch;
+    const refetchEntries = entriesQuery.refetch;
+    const refetchCalendarStatus = calendarStatus.refetch;
 
     useEffect(() => {
         if (!range || !connected) {
@@ -157,10 +156,27 @@ export function WeekView() {
             },
         })
             .then((result) => {
-                // The sync reports an expired grant rather than throwing, so the
-                // status query is what the banner reads; refresh it.
-                if (result.data?.syncCalendar.needsReconnect) {
-                    void calendarStatus.refetch();
+                const sync = result.data?.syncCalendar;
+
+                if (!sync) {
+                    return;
+                }
+
+                // The sync reports an expired grant rather than throwing, so
+                // the status query is what the banner reads; refresh it.
+                if (sync.needsReconnect) {
+                    void refetchCalendarStatus();
+
+                    return;
+                }
+
+                // Only what the sync could have changed is reloaded. Reading
+                // the calendar does not touch tracked entries unless a
+                // meeting was promoted, and usually none is.
+                void refetchCalendarEvents();
+
+                if (sync.autoPromoted > 0) {
+                    void refetchEntries();
                 }
             })
             .catch(() => {
@@ -168,7 +184,14 @@ export function WeekView() {
                 // lane simply stays empty and Settings explains why.
                 syncedRanges.current.delete(key);
             });
-    }, [range, connected, syncCalendar, calendarStatus]);
+    }, [
+        range,
+        connected,
+        syncCalendar,
+        refetchCalendarEvents,
+        refetchEntries,
+        refetchCalendarStatus,
+    ]);
 
     const needsReconnect =
         calendarStatus.data?.calendarStatus.needsReconnect ?? false;
@@ -394,11 +417,11 @@ export function WeekView() {
                         dayEndHour={preferences.dayEndHour}
                         onEditEntry={openEntry}
                         onDuplicateEntry={duplicateEntry}
-                        onDeleteEntry={(entry) => void deleteEntry(entry.id)}
+                        onDeleteEntry={(entry) => void deleteEntry(entry)}
                         onSelectSlot={openSlot}
                         onSelectRange={openRange}
                         onMoveEntry={(entry, startedAt, endedAt) =>
-                            void updateEntry(entry.id, {
+                            void updateEntry(entry, {
                                 startedAt: startedAt.toISOString(),
                                 endedAt: endedAt.toISOString(),
                             })

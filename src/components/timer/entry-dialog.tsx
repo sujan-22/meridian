@@ -232,7 +232,13 @@ function EntryForm({ projects, day, entry, initial, onDone }: EntryFormProps) {
         };
 
         const saved = entry
-            ? await updateEntry(entry.id, shared)
+            ? await updateEntry(
+                  entry,
+                  shared,
+                  // The project may have changed; the optimistic entry needs
+                  // the new one to show the right colour and client.
+                  projects.find((candidate) => candidate.id === projectId),
+              )
             : await createEntry(shared);
 
         if (saved) {
