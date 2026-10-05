@@ -196,7 +196,22 @@ input StartTimerInput {
   unbillablePercent: Int
 }
 
+type TicketEntry {
+  billableMinutes: Int!
+  billedMinutes: Int!
+  billingType: String!
+  description: String!
+  endedAt: DateTime
+  id: ID!
+  kind: String!
+  startedAt: DateTime!
+  unbillableMinutes: Int!
+  unbillablePercent: Int!
+}
+
 type TicketSummary {
+  billableMinutes: Int!
+  entries: [TicketEntry!]!
   entryCount: Int!
   estimateMaxMinutes: Int
   estimateMinMinutes: Int
@@ -208,6 +223,7 @@ type TicketSummary {
   status: EstimateStatus!
   ticketNumber: String!
   trackedMinutes: Int!
+  unbillableMinutes: Int!
 }
 
 type TimeEntry {

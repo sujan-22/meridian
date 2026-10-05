@@ -1,4 +1,4 @@
-import type { TicketSummaryRow } from "@/db/queries/tickets";
+import type { TicketEntryRow, TicketSummaryRow } from "@/db/queries/tickets";
 
 import type { AppBuilder } from "../builder";
 
@@ -48,6 +48,33 @@ export function ticketSummaryRef(
         } as const,
     });
 
+    /** A single session booked against the ticket. */
+    const TicketEntryRef = builder
+        .objectRef<TicketEntryRow>("TicketEntry")
+        .implement({
+            fields: (t) => ({
+                id: t.exposeID("id"),
+                description: t.exposeString("description"),
+                kind: t.exposeString("kind"),
+                billingType: t.exposeString("billingType"),
+                unbillablePercent: t.exposeInt("unbillablePercent"),
+                billedMinutes: t.exposeInt("billedMinutes"),
+                billableMinutes: t.exposeInt("billableMinutes"),
+                unbillableMinutes: t.exposeInt("unbillableMinutes"),
+
+                startedAt: t.field({
+                    type: "DateTime",
+                    resolve: (entry) => entry.startedAt,
+                }),
+
+                endedAt: t.field({
+                    type: "DateTime",
+                    nullable: true,
+                    resolve: (entry) => entry.endedAt,
+                }),
+            }),
+        });
+
     const ref = builder
         .objectRef<TicketSummaryModel>("TicketSummary")
         .implement({
@@ -60,7 +87,17 @@ export function ticketSummaryRef(
                 }),
 
                 trackedMinutes: t.exposeInt("trackedMinutes"),
+
+                /** The two halves of `trackedMinutes`, which they sum to. */
+                billableMinutes: t.exposeInt("billableMinutes"),
+                unbillableMinutes: t.exposeInt("unbillableMinutes"),
+
                 entryCount: t.exposeInt("entryCount"),
+
+                entries: t.field({
+                    type: [TicketEntryRef],
+                    resolve: (summary) => summary.entries,
+                }),
 
                 firstTrackedAt: t.field({
                     type: "DateTime",

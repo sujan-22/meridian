@@ -1,86 +1,146 @@
-import { and, asc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull } from "drizzle-orm";
 
 import { db } from "@/db";
 import { clients, projects, ticketEstimates, timeEntries } from "@/db/schema";
+import { entryBilledMinutes, splitBillableMinutes } from "@/lib/duration";
 
 type ProjectRow = typeof projects.$inferSelect;
 type ClientRow = typeof clients.$inferSelect;
 type EstimateRow = typeof ticketEstimates.$inferSelect;
+
+/** One session booked against a ticket. */
+export interface TicketEntryRow {
+    id: string;
+    description: string;
+    kind: string;
+    billingType: string;
+    unbillablePercent: number;
+    startedAt: Date;
+    endedAt: Date | null;
+    billedMinutes: number;
+    billableMinutes: number;
+    unbillableMinutes: number;
+}
 
 export interface TicketSummaryRow {
     project: ProjectRow & { client: ClientRow };
     ticketNumber: string;
     /** Quarter-hour minutes tracked against this ticket. */
     trackedMinutes: number;
+    /** The two sides of `trackedMinutes`; they always add back up to it. */
+    billableMinutes: number;
+    unbillableMinutes: number;
     entryCount: number;
     firstTrackedAt: Date | null;
     lastTrackedAt: Date | null;
     estimate: EstimateRow | null;
+    /** Every session, oldest first. */
+    entries: TicketEntryRow[];
 }
 
 /**
- * Every (project, ticket) that has tracked time, with its estimate attached.
+ * Every (project, ticket) that has tracked time, with its sessions, its
+ * billable split and its estimate attached.
  *
  * Tickets are discovered from the entries rather than maintained separately -
  * you never create a ticket here, you just tell it what was quoted.
+ *
+ * The totals are summed in TypeScript rather than SQL on purpose: the split
+ * between billed and written-off time snaps to quarter hours, and that rule
+ * lives in one place. Expressing it twice - once here in SQL and once in the
+ * app - is how the timesheet and this screen would come to disagree.
  */
 export async function findTicketSummaries(
     userId: string,
 ): Promise<TicketSummaryRow[]> {
     const rows = await db
-        .select({
-            project: projects,
-            client: clients,
-            ticketNumber: timeEntries.ticketNumber,
-
-            trackedMinutes:
-                sql<number>`coalesce(sum(coalesce(${timeEntries.timesheetDurationMinutes}, 0)), 0)::int`.as(
-                    "tracked_minutes",
-                ),
-
-            entryCount: sql<number>`count(*)::int`.as("entry_count"),
-
-            // Raw aggregates bypass drizzle's column mappers, so these arrive
-            // as timestamp strings rather than Dates.
-            firstTrackedAt: sql<string | null>`min(${timeEntries.startedAt})`.as(
-                "first_tracked_at",
-            ),
-            lastTrackedAt: sql<string | null>`max(${timeEntries.startedAt})`.as(
-                "last_tracked_at",
-            ),
-
-            estimate: ticketEstimates,
-        })
+        .select({ entry: timeEntries, project: projects, client: clients })
         .from(timeEntries)
         .innerJoin(projects, eq(timeEntries.projectId, projects.id))
         .innerJoin(clients, eq(projects.clientId, clients.id))
-        .leftJoin(
-            ticketEstimates,
-            and(
-                eq(ticketEstimates.projectId, timeEntries.projectId),
-                eq(ticketEstimates.ticketNumber, timeEntries.ticketNumber),
-            ),
-        )
         .where(
             and(
                 eq(timeEntries.userId, userId),
                 isNotNull(timeEntries.ticketNumber),
             ),
         )
-        .groupBy(projects.id, clients.id, timeEntries.ticketNumber, ticketEstimates.id)
-        .orderBy(asc(clients.name), asc(projects.name), asc(timeEntries.ticketNumber));
+        .orderBy(asc(timeEntries.startedAt));
 
-    return rows.map((row) => ({
-        project: { ...row.project, client: row.client },
-        ticketNumber: row.ticketNumber ?? "",
-        trackedMinutes: row.trackedMinutes ?? 0,
-        entryCount: row.entryCount ?? 0,
-        firstTrackedAt: row.firstTrackedAt
-            ? new Date(row.firstTrackedAt)
-            : null,
-        lastTrackedAt: row.lastTrackedAt ? new Date(row.lastTrackedAt) : null,
-        estimate: row.estimate ?? null,
-    }));
+    const estimates = await db
+        .select()
+        .from(ticketEstimates)
+        .where(eq(ticketEstimates.userId, userId));
+
+    const estimateFor = new Map(
+        estimates.map((estimate) => [
+            `${estimate.projectId}:${estimate.ticketNumber}`,
+            estimate,
+        ]),
+    );
+
+    const summaries = new Map<string, TicketSummaryRow>();
+
+    for (const { entry, project, client } of rows) {
+        const ticketNumber = entry.ticketNumber ?? "";
+        const key = `${project.id}:${ticketNumber}`;
+
+        const billedMinutes = entryBilledMinutes(entry);
+
+        const split = splitBillableMinutes(
+            billedMinutes,
+            entry.unbillablePercent ?? 0,
+            entry.billingType === "billable",
+        );
+
+        let summary = summaries.get(key);
+
+        if (!summary) {
+            summary = {
+                project: { ...project, client },
+                ticketNumber,
+                trackedMinutes: 0,
+                billableMinutes: 0,
+                unbillableMinutes: 0,
+                entryCount: 0,
+                firstTrackedAt: entry.startedAt,
+                lastTrackedAt: entry.startedAt,
+                estimate: estimateFor.get(key) ?? null,
+                entries: [],
+            };
+
+            summaries.set(key, summary);
+        }
+
+        summary.trackedMinutes += billedMinutes;
+        summary.billableMinutes += split.billableMinutes;
+        summary.unbillableMinutes += split.unbillableMinutes;
+        summary.entryCount += 1;
+
+        // Rows arrive oldest first, so the last one seen is the latest.
+        summary.lastTrackedAt = entry.startedAt;
+
+        summary.entries.push({
+            id: entry.id,
+            description: entry.description,
+            kind: entry.kind,
+            billingType: entry.billingType,
+            unbillablePercent: entry.unbillablePercent ?? 0,
+            startedAt: entry.startedAt,
+            endedAt: entry.endedAt,
+            billedMinutes,
+            billableMinutes: split.billableMinutes,
+            unbillableMinutes: split.unbillableMinutes,
+        });
+    }
+
+    return [...summaries.values()].sort(
+        (a, b) =>
+            a.project.client.name.localeCompare(b.project.client.name) ||
+            a.project.name.localeCompare(b.project.name) ||
+            a.ticketNumber.localeCompare(b.ticketNumber, undefined, {
+                numeric: true,
+            }),
+    );
 }
 
 export async function upsertTicketEstimate(input: {
