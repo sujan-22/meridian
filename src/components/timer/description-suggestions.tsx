@@ -96,6 +96,36 @@ export function DescriptionSuggestions({
         return () => window.removeEventListener("keydown", handleKey, true);
     }, [open, suggestions, highlighted, onPick, onDismiss]);
 
+    /**
+     * A press anywhere else closes the list.
+     *
+     * It is drawn over the controls below the field, so without this the only
+     * way out was Escape and the rest of the dialog could not be reached.
+     * The boundary is the wrapper rather than the list itself, so pressing
+     * back into the description does not dismiss what you are reading.
+     */
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        const handlePointerDown = (event: PointerEvent) => {
+            const anchor = ref.current?.parentElement;
+            const target = event.target as Node | null;
+
+            if (!anchor || (target && anchor.contains(target))) {
+                return;
+            }
+
+            onDismiss();
+        };
+
+        window.addEventListener("pointerdown", handlePointerDown, true);
+
+        return () =>
+            window.removeEventListener("pointerdown", handlePointerDown, true);
+    }, [open, onDismiss]);
+
     if (!open || term.length < MIN_QUERY || suggestions.length === 0) {
         return null;
     }
@@ -105,7 +135,7 @@ export function DescriptionSuggestions({
             ref={ref}
             role="listbox"
             aria-label="Previous descriptions"
-            className="absolute inset-x-0 top-full z-40 mt-1 overflow-hidden rounded-lg border border-border bg-popover shadow-xl"
+            className="absolute inset-x-0 top-full z-40 mt-1 max-h-56 overflow-y-auto rounded-lg border border-border bg-popover shadow-xl"
         >
             <p className="border-b border-border/60 px-3 py-1.5 text-[0.625rem] uppercase tracking-[0.12em] text-muted-foreground">
                 From previous work · Tab to use
@@ -125,7 +155,9 @@ export function DescriptionSuggestions({
                     onMouseEnter={() => setHighlighted(index)}
                     className={cn(
                         "flex w-full items-center gap-2.5 px-3 py-2 text-left transition-colors",
-                        index === highlighted ? "bg-accent" : "hover:bg-muted/50",
+                        index === highlighted
+                            ? "bg-accent"
+                            : "hover:bg-muted/50",
                     )}
                 >
                     <span
@@ -141,7 +173,9 @@ export function DescriptionSuggestions({
 
                         <span className="block truncate text-[0.625rem] text-muted-foreground">
                             {entry.project.name}
-                            {entry.ticketNumber ? ` · #${entry.ticketNumber}` : ""}
+                            {entry.ticketNumber
+                                ? ` · #${entry.ticketNumber}`
+                                : ""}
                             {" · "}
                             {format(new Date(entry.startedAt), "d MMM")}
                         </span>
