@@ -295,7 +295,7 @@ export function TimesheetView() {
                 </div>
             )}
 
-            {entriesQuery.loading && entries.length === 0 ? (
+            {entriesQuery.loading && !entriesQuery.data ? (
                 <div className="flex flex-col gap-3">
                     <Skeleton className="h-32 w-full rounded-xl" />
                     <Skeleton className="h-32 w-full rounded-xl" />

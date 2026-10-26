@@ -83,7 +83,7 @@ export function AccessPanel() {
                 </Button>
             </form>
 
-            {loading ? (
+            {loading && !data ? (
                 <p className="text-sm text-muted-foreground">Loading…</p>
             ) : (
                 <ul className="flex flex-col divide-y divide-border/60 rounded-lg border border-border/60">

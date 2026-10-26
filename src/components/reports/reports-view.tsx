@@ -154,7 +154,7 @@ export function ReportsView() {
                 </div>
             </header>
 
-            {loading && entries.length === 0 ? (
+            {loading && !data ? (
                 <div className="flex flex-col gap-3">
                     <Skeleton className="h-24 w-full rounded-xl" />
                     <Skeleton className="h-56 w-full rounded-xl" />

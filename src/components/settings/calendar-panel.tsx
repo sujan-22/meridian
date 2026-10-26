@@ -69,7 +69,7 @@ export function CalendarPanel() {
                 </div>
             </div>
 
-            {loading ? (
+            {loading && !status ? (
                 <p className="text-sm text-muted-foreground">Checking…</p>
             ) : status?.needsReconnect ? (
                 <div className="flex flex-col items-start gap-3">

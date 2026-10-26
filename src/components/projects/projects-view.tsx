@@ -164,7 +164,7 @@ export function ProjectsView() {
                 )}
             </div>
 
-            {summariesQuery.loading && all.length === 0 ? (
+            {summariesQuery.loading && !summariesQuery.data ? (
                 <div className="flex flex-col gap-2">
                     <Skeleton className="h-12 w-full rounded-lg" />
                     <Skeleton className="h-12 w-full rounded-lg" />
@@ -284,9 +284,7 @@ function ProjectRow({
                 <span
                     className={cn(
                         "flex items-center gap-1.5 text-xs",
-                        billable
-                            ? "text-emerald-400"
-                            : "text-muted-foreground",
+                        billable ? "text-emerald-400" : "text-muted-foreground",
                     )}
                 >
                     <CircleDollarSign className="size-3.5" />
