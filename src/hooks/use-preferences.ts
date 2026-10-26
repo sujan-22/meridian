@@ -26,6 +26,8 @@ export function usePreferences() {
 
     return {
         preferences: data?.preferences ?? DEFAULT_PREFERENCES,
-        loading,
+        // Only while there is nothing to show: cached preferences are being
+        // refreshed in the background, not waited for.
+        loading: loading && !data,
     };
 }

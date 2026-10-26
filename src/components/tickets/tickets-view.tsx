@@ -197,7 +197,7 @@ export function TicketsView() {
                 </Button>
             </div>
 
-            {loading && tickets.length === 0 ? (
+            {loading && !data ? (
                 <div className="flex flex-col gap-2">
                     <Skeleton className="h-16 w-full rounded-xl" />
                     <Skeleton className="h-16 w-full rounded-xl" />

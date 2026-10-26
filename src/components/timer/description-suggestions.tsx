@@ -12,6 +12,9 @@ import { cn } from "@/lib/utils";
 /** Below this there is nothing useful to match on. */
 const MIN_QUERY = 3;
 
+/** How long typing has to pause before the server is asked. */
+const SETTLE_MS = 150;
+
 interface DescriptionSuggestionsProps {
     query: string;
     /** Hidden while a value is being applied or the field is not focused. */
@@ -37,15 +40,34 @@ export function DescriptionSuggestions({
 
     const [highlighted, setHighlighted] = useState(0);
 
-    const { data } = useQuery(DescriptionSuggestionsDocument, {
-        variables: { query: term, limit: 6 },
-        skip: term.length < MIN_QUERY,
+    // The server is asked once typing pauses rather than on every keystroke.
+    // At production latency the answers to earlier keystrokes were still
+    // arriving while later ones were typed, so the list redrew for each and
+    // trailed behind the field.
+    const [settledTerm, setSettledTerm] = useState(term);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setSettledTerm(term), SETTLE_MS);
+
+        return () => clearTimeout(timer);
+    }, [term]);
+
+    const { data, previousData } = useQuery(DescriptionSuggestionsDocument, {
+        variables: { query: settledTerm, limit: 6 },
+        skip: settledTerm.length < MIN_QUERY,
+        // Past descriptions do not change while the dialog is open, so a term
+        // already asked about - backspacing, say - is answered from the cache.
+        fetchPolicy: "cache-first",
     });
 
-    // A stable reference, so the key handler below is not rebound each render.
+    // The last answer stays up while the next is on its way, so the list
+    // narrows in place instead of blinking empty between keystrokes. A stable
+    // reference, so the key handler below is not rebound each render.
     const suggestions = useMemo(
-        () => (data?.descriptionSuggestions ?? []) as TimeEntryFieldsFragment[],
-        [data],
+        () =>
+            ((data ?? previousData)?.descriptionSuggestions ??
+                []) as TimeEntryFieldsFragment[],
+        [data, previousData],
     );
 
     // Typing changes the list underneath the cursor, so start from the top.

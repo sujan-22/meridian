@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "@apollo/client/react";
+import { useApolloClient, useMutation, useQuery } from "@apollo/client/react";
 import {
     addWeeks,
     eachDayOfInterval,
@@ -102,6 +102,42 @@ export function WeekView() {
     const rangeVariables = range
         ? { from: range.from.toISOString(), to: range.to.toISOString() }
         : { from: "", to: "" };
+
+    const client = useApolloClient();
+
+    // Once this week is on screen, the weeks either side are loaded into the
+    // cache in the background, so paging forward or back draws immediately
+    // instead of waiting on the server. Keyed on a string rather than the
+    // range itself, which is a new object on every render.
+    const loadedWeek = entriesQuery.data ? range?.from.toISOString() : null;
+    const weekStartsOn = preferences.weekStartsOn as WeekStartsOn;
+
+    useEffect(() => {
+        if (!loadedWeek) {
+            return;
+        }
+
+        for (const offset of [-1, 1]) {
+            const neighbour = weekRange(
+                addWeeks(new Date(loadedWeek), offset),
+                weekStartsOn,
+            );
+
+            const variables = {
+                from: neighbour.from.toISOString(),
+                to: neighbour.to.toISOString(),
+            };
+
+            // Cache-first: a week already loaded costs nothing. A failure is
+            // harmless - the week simply loads when it is opened.
+            void client
+                .query({ query: EntriesDocument, variables })
+                .catch(() => undefined);
+            void client
+                .query({ query: CalendarEventsDocument, variables })
+                .catch(() => undefined);
+        }
+    }, [client, loadedWeek, weekStartsOn]);
 
     // Nothing awaits a refetch any more. Waiting for one only delayed what was
     // already on screen; the lane and the grid update when the data arrives.
@@ -383,7 +419,10 @@ export function WeekView() {
 
             {needsReconnect && <CalendarReconnect />}
 
-            {entriesQuery.loading && entries.length === 0 ? (
+            {/* Only while there is no answer at all. An empty week is still an
+                answer, and with background refreshes "empty and loading" means
+                an empty week being re-checked - not one still to arrive. */}
+            {entriesQuery.loading && !entriesQuery.data ? (
                 <Skeleton className="h-96 w-full rounded-xl" />
             ) : (
                 today &&

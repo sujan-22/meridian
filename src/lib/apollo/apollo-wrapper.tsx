@@ -19,6 +19,21 @@ function makeClient() {
         link: new HttpLink({
             uri,
         }),
+
+        defaultOptions: {
+            watchQuery: {
+                // Anything already in the cache is drawn at once and then
+                // brought up to date in the background, so returning to a page
+                // is instant and still correct. Cache-first alone left server-
+                // side totals - ticket hours, a report's range - frozen at
+                // whatever they were on the first visit until a full reload.
+                fetchPolicy: "cache-and-network",
+                // After that first answer, cache updates from mutations are
+                // enough; without this every cache write would go back to the
+                // server again.
+                nextFetchPolicy: "cache-first",
+            },
+        },
     });
 }
 
