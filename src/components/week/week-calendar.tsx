@@ -219,7 +219,7 @@ export function WeekCalendar({
             <div ref={surfaceRef} className="relative overflow-x-auto">
                 <div className="min-w-184">
                     <div
-                        className="sticky top-0 z-20 grid border-b border-border/60 bg-card/95 backdrop-blur"
+                        className="sticky top-0 z-20 grid border-b border-border/60 bg-card"
                         style={{
                             gridTemplateColumns: `${AXIS_WIDTH} repeat(${days.length}, minmax(0, 1fr))`,
                         }}

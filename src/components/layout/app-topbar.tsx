@@ -24,7 +24,7 @@ export function AppTopbar() {
         )?.[1] ?? "Meridian";
 
     return (
-        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center border-b border-border/70 bg-background/90 px-4 backdrop-blur-xl">
+        <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center border-b border-border/70 bg-background px-4">
             <SidebarTrigger className="-ml-1" />
 
             <Separator orientation="vertical" className="mx-3 h-4" />
