@@ -132,11 +132,23 @@ async function main() {
         solo.reason ?? "",
     );
 
+    // Confirmations are remembered for a minute; refusals never are.
+    await allowlist.addAllowed("stranger@example.com", "tester");
+    check(
+        "an address refused a moment ago gets in as soon as it is added",
+        await allowlist.isAllowed("stranger@example.com"),
+    );
+
     await allowlist.addAllowed("second@evenica.com", "tester");
+    check(
+        "an added address is allowed",
+        await allowlist.isAllowed("second@evenica.com"),
+    );
+
     const removed = await allowlist.removeAllowed("second@evenica.com");
     check("a second address can be removed", removed.removed);
     check(
-        "the removed address loses access",
+        "the removed address loses access, though it was just confirmed",
         !(await allowlist.isAllowed("second@evenica.com")),
     );
 

@@ -11,6 +11,23 @@ function normalize(email: string): string {
 }
 
 /**
+ * Addresses this server instance has recently confirmed, and when.
+ *
+ * Every GraphQL request asks whether its caller is allowed, and in production
+ * each answer was a round trip to a database in another region, made before
+ * the request's own query could even start. A confirmation is now trusted for
+ * a minute. Only confirmations are kept: a refusal is always asked again, so
+ * an address that has just been added works at once.
+ *
+ * The cost is that removing someone takes effect immediately on the instance
+ * that removed them, and within a minute everywhere else - a shorter window
+ * than the five-minute session cookie cache already allows.
+ */
+const CONFIRMED_FOR_MS = 60_000;
+
+const confirmed = new Map<string, number>();
+
+/**
  * Whether this address may sign in.
  *
  * An empty list admits nobody. That is the safe direction: the alternative -
@@ -25,11 +42,27 @@ export async function isAllowed(
         return false;
     }
 
+    const address = normalize(email);
+    const confirmedAt = confirmed.get(address);
+
+    if (
+        confirmedAt !== undefined &&
+        Date.now() - confirmedAt < CONFIRMED_FOR_MS
+    ) {
+        return true;
+    }
+
     const [row] = await db
         .select({ email: accessAllowlist.email })
         .from(accessAllowlist)
-        .where(eq(accessAllowlist.email, normalize(email)))
+        .where(eq(accessAllowlist.email, address))
         .limit(1);
+
+    if (row) {
+        confirmed.set(address, Date.now());
+    } else {
+        confirmed.delete(address);
+    }
 
     return row !== undefined;
 }
@@ -82,6 +115,8 @@ export async function removeAllowed(
         .delete(accessAllowlist)
         .where(eq(accessAllowlist.email, normalize(email)))
         .returning({ email: accessAllowlist.email });
+
+    confirmed.delete(normalize(email));
 
     return { removed: rows.length > 0 };
 }
